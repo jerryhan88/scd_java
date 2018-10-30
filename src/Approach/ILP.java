@@ -4,26 +4,24 @@ import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
 
-import java.io.BufferedWriter;
 import java.io.FileOutputStream;
-import java.nio.file.Files;
 import java.util.*;
 
 import Other.Etc;
 import Other.Parameter;
 import Other.Solution;
 
-public class MILP {
+public class ILP extends ApproachSupClass {
     Parameter prmt;
     Etc etc;
-    //
     IloCplex cplex;
+    //
     HashMap<Index.ki, IloNumVar> y_ki;
     HashMap<Index.kriT, IloNumVar> z_kriT;
     HashMap<Index.kriN, IloNumVar> a_kriN;
     HashMap<Index.krij, IloNumVar> x_krij;
 
-    public MILP(Parameter _prmt, Etc _etc) {
+    public ILP(Parameter _prmt, Etc _etc) {
         prmt = _prmt;
         etc = _etc;
         //
@@ -47,7 +45,7 @@ public class MILP {
             Index.krij krij;
             //
             cplex = new IloCplex();
-            ModelBuildingHelper.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, a_kriN, x_krij);
+            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, a_kriN, x_krij);
             //
             obj = cplex.linearNumExpr();
             for (int i : prmt.T) {
@@ -68,8 +66,8 @@ public class MILP {
             }
             cplex.addMaximize(obj);
             //
-            ModelBuildingHelper.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
-            ModelBuildingHelper.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
             // Complicated and Combined constraints Q3
             for (int k : prmt.K) {
                 R = prmt.R_k.get(k);
@@ -100,7 +98,7 @@ public class MILP {
 
     public void solveModel() {
         try {
-            cplex.setOut(new FileOutputStream(etc.logFile));
+            cplex.setOut(new FileOutputStream(etc.logPath.toFile()));
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 Solution sol = new Solution();
@@ -133,5 +131,11 @@ public class MILP {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    @Override
+    public void run() {
+        buildModel();
+        solveModel();
     }
 }

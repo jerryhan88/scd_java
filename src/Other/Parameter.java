@@ -25,6 +25,7 @@ public class Parameter implements Serializable {
     public HashMap<Index.kr, ArrayList> C_kr = new HashMap<>();
     public HashMap<Index.kr, ArrayList> N_kr = new HashMap<>();
     public HashMap<Index.kr, Double> gamma_kr = new HashMap<>();
+    public HashMap<Index.kr, Double> l_kr = new HashMap<>();
     public HashMap<Index.kr, Double> u_kr = new HashMap<>();
     //
     public HashMap<Index.ij, Double> t_ij = new HashMap<>();
@@ -90,6 +91,7 @@ public class Parameter implements Serializable {
             JSONObject _C_kr = (JSONObject) jsonObjWhole.get("C_kr");
             JSONObject _N_kr = (JSONObject) jsonObjWhole.get("N_kr");
             JSONObject _gamma_kr = (JSONObject) jsonObjWhole.get("gamma_kr");
+            JSONObject _l_kr = (JSONObject) jsonObjWhole.get("l_kr");
             JSONObject _u_kr = (JSONObject) jsonObjWhole.get("u_kr");
             //
             Index.kr kr;
@@ -113,6 +115,7 @@ public class Parameter implements Serializable {
                 }
                 _prmt.N_kr.put(kr, krN);
                 _prmt.gamma_kr.put(kr, (double) _gamma_kr.get(key));
+                _prmt.l_kr.put(kr, (double) _l_kr.get(key));
                 _prmt.u_kr.put(kr, (double) _u_kr.get(key));
             }
             //

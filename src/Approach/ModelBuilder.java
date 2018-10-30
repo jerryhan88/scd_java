@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 
-public class ModelBuildingHelper {
+public class ModelBuilder {
 
     static void def_dvs_yzax(Parameter prmt, IloCplex cplex,
                              HashMap<ki, IloNumVar> y_ki,
@@ -86,7 +86,7 @@ public class ModelBuildingHelper {
                                      HashMap<Index.krij, IloNumVar> x_krij) {
         String krP, krM;
         String iP, iM;
-        ArrayList<String> C;
+        ArrayList<String> krC;
         ArrayList<String> krN;
         IloNumVar x, a;
         IloLinearNumExpr cnst;
@@ -99,24 +99,26 @@ public class ModelBuildingHelper {
             double M = prmt.N.size() * Collections.max(prmt.t_ij.values());
             kr = new Index.kr(k, r);
             krN = prmt.N_kr.get(kr);
+            krC = prmt.C_kr.get(kr);
             krP = String.format("o_%d_%d", k, r);
             krM = String.format("d_%d_%d", k, r);
-            C = prmt.C_kr.get(kr);
             // Initiate arrival time
             a = a_kriN.get(new Index.kriN(k, r, krP));
             cplex.addEq(a, 0, String.format("iAT(%d,%d)", k, r));
-            // Detour Limit
-            cnst = cplex.linearNumExpr();
-            a = a_kriN.get(new Index.kriN(k, r, krM));
-            cnst.addTerm(1, a);
-            for (String i: C) {
-                for (String j: C) {
-                    x = x_krij.get(new Index.krij(k, r, i, j));
-                    ij = new Index.ij(i,j);
-                    cnst.addTerm(-prmt.t_ij.get(ij), x);
+            // Arrival time calculation
+            for (String i: krN) {
+                for (String j: krN) {
+                    ij = new Index.ij(i, j);
+                    krij = new Index.krij(k, r, i, j);
+                    cnst = cplex.linearNumExpr();
+                    cnst.addTerm(1, a_kriN.get(new Index.kriN(k, r, i)));
+                    cnst.addTerm(M, x_krij.get(krij));
+                    cnst.addTerm(-1, a_kriN.get(new Index.kriN(k, r, j)));
+                    cplex.addLe(cnst,
+                            M - prmt.c_i.get(i) - prmt.t_ij.get(ij),
+                            String.format("AT(%d,%d,%s,%s)", k, r, i, j));
                 }
             }
-            cplex.addLe(cnst, prmt.u_kr.get(kr), String.format("DL(%d,%d)", k, r));
             // Time Window
             for (String i: prmt.N) {
                 kriN = new Index.kriN(k, r, i);
@@ -133,8 +135,8 @@ public class ModelBuildingHelper {
                         String.format("PD_S(%d,%d,%d)", k, r, i));
             }
             // Routine route preservation
-            for (String i: C) {
-                for (String j: C) {
+            for (String i: krC) {
+                for (String j: krC) {
                     krij = new Index.krij(k, r, i, j);
                     cnst = cplex.linearNumExpr();
                     cnst.addTerm(prmt.p_krij.get(krij), a_kriN.get(new Index.kriN(k, r, i)));
@@ -142,24 +144,20 @@ public class ModelBuildingHelper {
                     cplex.addLe(cnst, 0, String.format("RR_P(%d,%d,%s,%s)", k, r, i, j));
                 }
             }
-            // Arrival time calculation
+            // Detour Limit
+            cnst = cplex.linearNumExpr();
             for (String i: krN) {
                 for (String j: krN) {
-                    ij = new Index.ij(i, j);
-                    krij = new Index.krij(k, r, i, j);
-                    cnst = cplex.linearNumExpr();
-                    cnst.addTerm(1, a_kriN.get(new Index.kriN(k, r, i)));
-                    cnst.addTerm(M, x_krij.get(krij));
-                    cnst.addTerm(-1, a_kriN.get(new Index.kriN(k, r, j)));
-                    cplex.addLe(cnst,
-                            M - prmt.c_i.get(i) - prmt.t_ij.get(ij),
-                            String.format("AT(%d,%d,%s,%s)", k, r, i, j));
+                    x = x_krij.get(new Index.krij(k, r, i, j));
+                    ij = new Index.ij(i,j);
+                    cnst.addTerm(prmt.t_ij.get(ij), x);
                 }
             }
+            cplex.addLe(cnst, prmt.l_kr.get(kr) + prmt.u_kr.get(kr),
+                        String.format("DL(%d,%d)", k, r));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-
     }
 
     static void def_FC_cnsts_krGiven(Parameter prmt, int k, int r,
@@ -272,12 +270,6 @@ public class ModelBuildingHelper {
                                   HashMap<Index.krij, IloNumVar> x_krij) {
 
         ArrayList<Integer> R;
-        ArrayList<String> C;
-        ArrayList<String> krN;
-        IloNumVar x, a;
-        IloLinearNumExpr cnst;
-        Index.kr kr;
-        Index.krij krij;
         // Routing (Q2)
         try {
             for (int k : prmt.K) {

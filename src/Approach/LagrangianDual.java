@@ -49,7 +49,7 @@ public class LagrangianDual {
             Index.krij krij;
             //
             cplex = new IloCplex();
-            ModelBuildingHelper.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, a_kriN, x_krij);
+            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, a_kriN, x_krij);
             for (int k : prmt.K) {
                 R = prmt.R_k.get(k);
                 for (int r : R) {
@@ -104,8 +104,8 @@ public class LagrangianDual {
             }
             cplex.addGe(l, cplex.sum(cnst, cnstQ), "epigraphForm");
             //
-            ModelBuildingHelper.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
-            ModelBuildingHelper.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -114,7 +114,7 @@ public class LagrangianDual {
     public void solveModel() {
         try {
             cplex.exportModel("LD.lp");
-            cplex.setOut(new FileOutputStream(etc.logFile));
+            cplex.setOut(new FileOutputStream(etc.logPath.toFile()));
             cplex.solve();
             System.out.println("hi2");
             cplex.end();

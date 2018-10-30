@@ -10,19 +10,23 @@ import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class SubgradientDescentAlgorithm {
-    static int NUM_ITERS_LIMIT = 1000;
+
+public class SubgradientDescentAlgorithm extends ApproachSupClass {
+    static int NUM_ITERS_LIMIT = 10;
     static double DUAL_GAP_LIMIT = 0.001;
     //
     Parameter prmt;
     Etc etc;
     IloCplex cplex;
-    //
     double a, u, dualObjV0, F_star;
     double dualObjV1, ObjV_TAA, objV_Routing;
     int numIters, noImpvLimits, noUpdateCounter;
@@ -53,13 +57,33 @@ public class SubgradientDescentAlgorithm {
         }
     }
 
+    public void logging(String[] row) {
+        try {
+            CSVPrinter csvPrinter;
+            if (numIters == 0 && row[3].equals("Initialization")) {
+                csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString()), CSVFormat.DEFAULT
+                        .withHeader("cpuT", "Iteration", "Category", "Note"));
+            } else {
+                csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString(), true), CSVFormat.DEFAULT);
+            }
+            csvPrinter.printRecord(row);
+            csvPrinter.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public void run() {
+        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                              "-", "Initialization"});
         while (numIters < NUM_ITERS_LIMIT) {
             solveDuals();
             primalExtraction();
             UpdateLM();
             if ((dualObjV0 - F_star) <= DUAL_GAP_LIMIT) break;
             numIters += 1;
+            System.out.println(numIters + ": " + etc.getCpuTime() + "  " +etc.getWallTime());
         }
         Solution sol = new Solution();
         sol.prmt = prmt;
@@ -83,6 +107,8 @@ public class SubgradientDescentAlgorithm {
         objV_Routing = 0.0;
         //
         solve_TAA();
+        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                "solveDuals", "solve_TAA"});
         solve_Routing();
         dualObjV1 = ObjV_TAA + objV_Routing;
     }
@@ -147,9 +173,9 @@ public class SubgradientDescentAlgorithm {
             }
             cplex.addMaximize(obj);
             //
-            ModelBuildingHelper.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
             //
-            cplex.setOut(new FileOutputStream(etc.logFile));
+            cplex.setOut(null);
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 ObjV_TAA = cplex.getObjValue();
@@ -208,10 +234,10 @@ public class SubgradientDescentAlgorithm {
                     }
                     cplex.addMaximize(obj);
                     //
-                    ModelBuildingHelper.def_FC_cnsts_krGiven(prmt, k, r, cplex, x_krij);
-                    ModelBuildingHelper.def_AT_cnsts_krGiven(prmt, k, r, cplex, a_kriN, x_krij);
+                    ModelBuilder.def_FC_cnsts_krGiven(prmt, k, r, cplex, x_krij);
+                    ModelBuilder.def_AT_cnsts_krGiven(prmt, k, r, cplex, a_kriN, x_krij);
                     //
-                    cplex.setOut(new FileOutputStream(etc.logFile));
+                    cplex.setOut(null);
                     cplex.solve();
                     if (cplex.getStatus() == IloCplex.Status.Optimal) {
                         try {
@@ -229,6 +255,8 @@ public class SubgradientDescentAlgorithm {
                         cplex.output().println("Other.Solution status = " + cplex.getStatus());
                     }
                     cplex.end();
+                    logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                            "solveDuals", String.format("solve_Routing (%d&%d)", k, r)});
                 }
             }
         } catch (Exception ex) {
@@ -282,7 +310,7 @@ public class SubgradientDescentAlgorithm {
             }
             cplex.addMaximize(obj);
             //
-            ModelBuildingHelper.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
             // Complicated and Combined constraints Q3
             for (int i: prmt.T) {
                 iP = String.format("p%d", i);
@@ -309,7 +337,7 @@ public class SubgradientDescentAlgorithm {
                 }
             }
             //
-            cplex.setOut(new FileOutputStream(etc.logFile));
+            cplex.setOut(null);
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 objV = cplex.getObjValue();
@@ -319,9 +347,13 @@ public class SubgradientDescentAlgorithm {
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
+            cplex.end();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                "primalExtraction", "-"});
+
     }
 
     private void UpdateLM() {
@@ -402,5 +434,7 @@ public class SubgradientDescentAlgorithm {
                 }
             }
         }
+        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                "UpdateLM", "-"});
     }
 }

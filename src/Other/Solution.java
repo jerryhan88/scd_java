@@ -67,9 +67,7 @@ public class Solution implements Serializable {
 
     public void saveSolCSV(Path fpath) {
         try {
-            BufferedWriter writer = Files.newBufferedWriter(Paths.get(fpath.toString()));
-            CSVPrinter csvPrinter = null;
-            csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT
+            CSVPrinter csvPrinter = new CSVPrinter(new FileWriter(fpath.toString()), CSVFormat.DEFAULT
                     .withHeader("objV", "Gap", "eliCpuTime", "eliWallTime"));
             String[] res = {String.format("%f", objV),
                     String.format("%f", dualG),

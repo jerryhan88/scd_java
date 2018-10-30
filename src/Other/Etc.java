@@ -1,14 +1,14 @@
 package Other;
 
-import java.io.File;
+import java.lang.management.ManagementFactory;
+import com.sun.management.OperatingSystemMXBean;
 import java.nio.file.Path;
 import java.util.Date;
 
 
 public class Etc {
     public Date startDate;
-    public long startTimeMs;
-    public File logFile = null;
+    public Path logPath = null;
     public Path solPathJSN = null;
     public Path solPathSER = null;
     public Path solPathCSV = null;
@@ -17,17 +17,18 @@ public class Etc {
 
     public Etc() {
         startDate = new Date();
-        startTimeMs = System.currentTimeMillis();
     }
 
-    public Etc(Path _logPath, Path _solPathJSON, Path _solPathSER, Path _solPathCSV, Path _solPathTXT) {
+    public Etc(Path _solPathJSON, Path _solPathSER, Path _solPathCSV, Path _solPathTXT) {
         startDate = new Date();
-        startTimeMs = System.currentTimeMillis();
-        logFile = _logPath.toFile();
         solPathJSN = _solPathJSON;
         solPathSER = _solPathSER;
         solPathCSV = _solPathCSV;
         solPathTXT = _solPathTXT;
+    }
+
+    public void setLogPath(Path _logPath) {
+        logPath = _logPath;
     }
 
     public double getWallTime() {
@@ -36,7 +37,7 @@ public class Etc {
     }
 
     public double getCpuTime() {
-        long endTimeMs = System.currentTimeMillis();
-        return (endTimeMs - startTimeMs) / 1000.;
+        OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        return operatingSystemMXBean.getProcessCpuTime() / 1000000000.;
     }
 }

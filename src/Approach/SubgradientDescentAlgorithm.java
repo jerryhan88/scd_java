@@ -13,7 +13,6 @@ import ilog.cplex.IloCplex;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,10 +45,10 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         numIters = 0;
         noImpvLimits = 5;
         noUpdateCounter = 0;
-        ArrayList<Integer> R;
+        ArrayList<Integer> kR;
         for (int k : prmt.K) {
-            R = prmt.R_k.get(k);
-            for (int r : R) {
+            kR = prmt.R_k.get(k);
+            for (int r : kR) {
                 for (int i : prmt.T) {
                     _lm_kriT.put(new Index.kriT(k, r, i), 0.0);
                 }
@@ -116,7 +115,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     private void solve_TAA() {
         double lm;
         double w, gamma;
-        ArrayList<Integer> R;
+        ArrayList<Integer> kR;
         IloNumVar y, z;
         IloLinearNumExpr obj;
         Index.ki ki;
@@ -132,8 +131,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 for (int i : prmt.T) {
                     y_ki.put(new Index.ki(k, i), cplex.boolVar(String.format("y(%d,%d)", k, i)));
                 }
-                R = prmt.R_k.get(k);
-                for (int r : R) {
+                kR = prmt.R_k.get(k);
+                for (int r : kR) {
                     for (int i : prmt.T) {
                         z_kriT.put(new Index.kriT(k, r, i), cplex.boolVar(String.format("z(%d,%d,%d)", k, r, i)));
                     }
@@ -147,11 +146,11 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     w = prmt.w_i.get(i);
                     y = y_ki.get(ki);
                     obj.addTerm(w, y);
-                    R = prmt.R_k.get(k);
-                    for (int r : R) {
+                    kR = prmt.R_k.get(k);
+                    for (int r : kR) {
                         kr = new Index.kr(k, r);
                         kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.gamma_kr.get(kr);
+                        gamma = prmt.r_kr.get(kr);
                         z = z_kriT.get(kriT);
                         obj.addTerm(-(w * gamma), z);
                     }
@@ -161,8 +160,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 for (int k : prmt.K) {
                     ki = new Index.ki(k, i);
                     y = y_ki.get(ki);
-                    R = prmt.R_k.get(k);
-                    for (int r : R) {
+                    kR = prmt.R_k.get(k);
+                    for (int r : kR) {
                         kriT = new Index.kriT(k, r, i);
                         lm = _lm_kriT.get(kriT);
                         z = z_kriT.get(kriT);
@@ -194,10 +193,9 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         }
     }
 
-    private void solve_Routing() {
-        String iP;
+    public void solve_Routing() {
         double lm;
-        ArrayList<Integer> R;
+        ArrayList<Integer> kR;
         ArrayList<String> krN;
         IloNumVar x;
         IloLinearNumExpr obj;
@@ -206,8 +204,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         Index.krij krij;
         try {
             for (int k : prmt.K) {
-                R = prmt.R_k.get(k);
-                for (int r : R) {
+                kR = prmt.R_k.get(k);
+                for (int r : kR) {
                     kr = new Index.kr(k, r);
                     krN = prmt.N_kr.get(kr);
                     HashMap<Index.kriN, IloNumVar> a_kriN = new HashMap<>();
@@ -223,11 +221,10 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     //
                     obj = cplex.linearNumExpr();
                     for (int i : prmt.T) {
-                        iP = String.format("p%d", i);
                         kriT = new Index.kriT(k, r, i);
                         lm = _lm_kriT.get(kriT);
                         for (String j: krN) {
-                            krij = new Index.krij(k, r, iP, j);
+                            krij = new Index.krij(k, r, prmt.n_i.get(i), j);
                             x = x_krij.get(krij);
                             obj.addTerm(lm, x);
                         }
@@ -265,9 +262,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     }
 
     private void primalExtraction() {
-        String iP;
         double w, gamma, objV;
-        ArrayList<Integer> R;
+        ArrayList<Integer> kR;
         ArrayList<String> krN;
         IloLinearNumExpr obj, cnst;
         IloNumVar y, z;
@@ -283,8 +279,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 for (int i : prmt.T) {
                     y_ki.put(new Index.ki(k, i), cplex.boolVar(String.format("y(%d,%d)", k, i)));
                 }
-                R = prmt.R_k.get(k);
-                for (int r : R) {
+                kR = prmt.R_k.get(k);
+                for (int r : kR) {
                     for (int i : prmt.T) {
                         z_kriT.put(new Index.kriT(k, r, i), cplex.boolVar(String.format("z(%d,%d,%d)", k, r, i)));
                     }
@@ -298,11 +294,11 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     w = prmt.w_i.get(i);
                     y = y_ki.get(ki);
                     obj.addTerm(w, y);
-                    R = prmt.R_k.get(k);
-                    for (int r : R) {
+                    kR = prmt.R_k.get(k);
+                    for (int r : kR) {
                         kr = new Index.kr(k, r);
                         kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.gamma_kr.get(kr);
+                        gamma = prmt.r_kr.get(kr);
                         z = z_kriT.get(kriT);
                         obj.addTerm(-(w * gamma), z);
                     }
@@ -313,12 +309,11 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
             // Complicated and Combined constraints Q3
             for (int i: prmt.T) {
-                iP = String.format("p%d", i);
                 for (int k : prmt.K) {
                     ki = new Index.ki(k, i);
                     y = y_ki.get(ki);
-                    R = prmt.R_k.get(k);
-                    for (int r : R) {
+                    kR = prmt.R_k.get(k);
+                    for (int r : kR) {
                         kr = new Index.kr(k, r);
                         kriT = new Index.kriT(k, r, i);
                         z = z_kriT.get(kriT);
@@ -329,7 +324,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                         double sumX = 0;
                         krN = prmt.N_kr.get(kr);
                         for (String j: krN) {
-                            krij = new Index.krij(k, r, iP, j);
+                            krij = new Index.krij(k, r, prmt.n_i.get(i), j);
                             sumX += _x_krij.get(krij);
                         }
                         cplex.addLe(cnst, sumX, String.format("CC(%d,%d,%d)", i, k, r));
@@ -357,7 +352,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     }
 
     private void UpdateLM() {
-        String iP;
         double y, z;
         double lm;
         ArrayList<Integer> R;
@@ -386,7 +380,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         double denominator = u * (dualObjV0 - F_star);
         double numerator2 = 0.0;
         for (int i: prmt.T) {
-            iP = String.format("p%d", i);
             for (int k: prmt.K) {
                 ki = new Index.ki(k, i);
                 y = _y_ki.get(ki);
@@ -398,7 +391,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     krN = prmt.N_kr.get(kr);
                     double sumX = 0.0;
                     for (String j: krN) {
-                        krij = new Index.krij(k, r, iP, j);
+                        krij = new Index.krij(k, r, prmt.n_i.get(i), j);
                         sumX += _x_krij.get(krij);
                     }
                     numerator2 += Math.pow(sumX + z - y, 2);
@@ -409,7 +402,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
 
         // Update multipliers
         for (int i : prmt.T) {
-            iP = String.format("p%d", i);
             for (int k : prmt.K) {
                 ki = new Index.ki(k, i);
                 y = _y_ki.get(ki);
@@ -421,7 +413,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     krN = prmt.N_kr.get(kr);
                     double sumX = 0.0;
                     for (String j: krN) {
-                        krij = new Index.krij(k, r, iP, j);
+                        krij = new Index.krij(k, r, prmt.n_i.get(i), j);
                         sumX += _x_krij.get(krij);
                     }
                     lm = _lm_kriT.get(kriT) - a * (sumX + z - y);

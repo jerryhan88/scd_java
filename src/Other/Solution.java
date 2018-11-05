@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Solution implements Serializable {
     public Parameter prmt;
@@ -92,28 +94,35 @@ public class Solution implements Serializable {
             //
             logContents += "Details\n";
             Index.ki ki;
+            Index.kr kr;
             Index.kriN kriN;
             Index.krij krij;
-            ArrayList<Integer> R;
-            ArrayList<String> krN;
-            String krP, krM;
+            ArrayList<Integer> kR;
+            ArrayList<String> krC, krN;
+            String o_kr, d_kr;
             for (int k: prmt.K) {
                 ArrayList<Integer> assignedTasks = new ArrayList<>();
                 ArrayList<String> _assignedTasks = new ArrayList<>();
+                Set<String> meaninglessNodes = new HashSet<>();
                 for (int i: prmt.T) {
                     ki = new Index.ki(k, i);
                     if (y_ki.get(ki) > 0.5) {
                         assignedTasks.add(i);
                         _assignedTasks.add(String.format("%d", i));
+                    } else {
+                        meaninglessNodes.add(prmt.h_i.get(i));
+                        meaninglessNodes.add(prmt.n_i.get(i));
                     }
                 }
                 logContents += String.format("A%d: ", k);
                 logContents += "[" + String.join(",", _assignedTasks) + "]\n";
-                R = prmt.R_k.get(k);
-                for (int r : R) {
-                    krN = prmt.N_kr.get(new Index.kr(k, r));
-                    krP = String.format("o_%d_%d", k, r);
-                    krM = String.format("d_%d_%d", k, r);
+                kR = prmt.R_k.get(k);
+                for (int r : kR) {
+                    kr = new Index.kr(k, r);
+                    krC = prmt.C_kr.get(kr);
+                    krN = prmt.N_kr.get(kr);
+                    o_kr = String.format("s0_%d_%d", k, r);
+                    d_kr = String.format("s%d_%d_%d", krC.size() - 1, k, r);
                     HashMap<String, String> _route = new HashMap<>();
                     for (String i: krN) {
                         for (String j: krN) {
@@ -123,16 +132,24 @@ public class Solution implements Serializable {
                             }
                         }
                     }
-                    String i = krP;
+                    String i = o_kr;
                     String route = "";
-                    while (!i.equals(krM)) {
-                        kriN = new Index.kriN(k, r, i);
-                        route += String.format("%s(%.2f)-", i, a_kriN.get(kriN));
+                    ArrayList<String> _accomplishedTasks = new ArrayList<>();
+                    while (!i.equals(d_kr)) {
+                        if (!meaninglessNodes.contains(i)) {
+                            kriN = new Index.kriN(k, r, i);
+                            route += String.format("%s(%.2f)-", i, a_kriN.get(kriN));
+                            if (i.startsWith("n")) {
+                                _accomplishedTasks.add(i.substring("n".length()));
+                            }
+                        }
                         i = _route.get(i);
                     }
                     kriN = new Index.kriN(k, r, i);
                     route += String.format("%s(%.2f)", i, a_kriN.get(kriN));
-                    logContents += String.format("\t R%d: %s\n", r, route);
+                    logContents += String.format("\t R%d%s: %s\n", r,
+                            "[" + String.join(",", _accomplishedTasks) + "]"
+                            , route);
                 }
             }
             bw.write(logContents);

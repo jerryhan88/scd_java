@@ -1,5 +1,6 @@
 import Approach.ApproachSupClass;
 import Approach.ILP;
+import Approach.SDA_BnB;
 import Approach.SubgradientDescentAlgorithm;
 import Other.Etc;
 import Other.Parameter;
@@ -9,13 +10,19 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 
 public class Tester {
     public static void testSmallExample() {
+//        /*
+
         Path dpath = Paths.get("_temp");
-        String prefix = "g0-na005-nt003-sn00";
-        String appName = "SDA";  // String approach = "ILP";
+        String prefix = "ED_Ex0";
+//        String appName = "ILP";
+//        String appName = "SDA";
+        String appName = "SDAbnb";
 
         Path prmt_fpath = dpath.resolve(String.format("prmt_%s.ser", prefix));
         Parameter prmt;
@@ -41,7 +48,14 @@ public class Tester {
             etc.setLogPath(dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
             SubgradientDescentAlgorithm sda = new SubgradientDescentAlgorithm(prmt, etc);
             sda.run();
+        } else if (appName.equals("SDAbnb")) {
+            etc.setLogPath(dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
+            SubgradientDescentAlgorithm sda_bnb = new SDA_BnB(prmt, etc);
+            sda_bnb.run();
         }
+
+
+//        */
     }
 
     public static void main(String[] args) {

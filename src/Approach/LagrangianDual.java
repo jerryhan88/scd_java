@@ -73,7 +73,7 @@ public class LagrangianDual {
                     for (int r : R) {
                         kr = new Index.kr(k, r);
                         kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.gamma_kr.get(kr);
+                        gamma = prmt.r_kr.get(kr);
                         z = z_kriT.get(kriT);
                         cnst.addTerm(-(w * gamma), z);
                     }

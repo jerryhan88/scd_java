@@ -33,9 +33,8 @@ public class ILP extends ApproachSupClass {
 
     public void buildModel() {
         try {
-            String iP;
             double w, gamma;
-            ArrayList<Integer> R;
+            ArrayList<Integer> kR;
             ArrayList<String> krN;
             IloNumVar y, z, x;
             IloLinearNumExpr obj, cnst;
@@ -54,11 +53,11 @@ public class ILP extends ApproachSupClass {
                     w = prmt.w_i.get(i);
                     y = y_ki.get(ki);
                     obj.addTerm(w, y);
-                    R = prmt.R_k.get(k);
-                    for (int r : R) {
+                    kR = prmt.R_k.get(k);
+                    for (int r : kR) {
                         kr = new Index.kr(k, r);
                         kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.gamma_kr.get(kr);
+                        gamma = prmt.r_kr.get(kr);
                         z = z_kriT.get(kriT);
                         obj.addTerm(-(w * gamma), z);
                     }
@@ -70,24 +69,23 @@ public class ILP extends ApproachSupClass {
             ModelBuilder.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
             // Complicated and Combined constraints Q3
             for (int k : prmt.K) {
-                R = prmt.R_k.get(k);
-                for (int r : R) {
+                kR = prmt.R_k.get(k);
+                for (int r : kR) {
                     kr = new Index.kr(k, r);
                     krN = prmt.N_kr.get(kr);
                     for (int i: prmt.T) {
-                        iP = String.format("p%d", i);
                         ki = new Index.ki(k, i);
                         kriT = new Index.kriT(k, r, i);
                         cnst = cplex.linearNumExpr();
                         y = y_ki.get(ki);
                         cnst.addTerm(1, y);
                         for (String j: krN) {
-                            krij = new Index.krij(k, r, iP, j);
+                            krij = new Index.krij(k, r, prmt.n_i.get(i), j);
                             x = x_krij.get(krij);
                             cnst.addTerm(-1, x);
                         }
                         z = z_kriT.get(kriT);
-                        cplex.addLe(cnst, z, String.format("CC(%d,%d,%d)", i, k, r));
+                        cplex.addLe(cnst, z, String.format("CC(%d,%d,%d)", k, r, i));
                     }
                 }
             }

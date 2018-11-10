@@ -1,8 +1,8 @@
 package Index;
 
-public class ij extends IndexSupCls {
+public class IJ extends IndexSupCls {
     String i, j;
-    public ij(String _i, String _j) {
+    public IJ(String _i, String _j) {
         i = _i;
         j = _j;
         notation = String.format("[%s,%s]", i, j);

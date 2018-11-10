@@ -1,6 +1,6 @@
 package Approach;
 
-import Index.ki;
+import Index.*;
 import Other.Etc;
 import Other.Parameter;
 import ilog.concert.IloLinearNumExpr;
@@ -17,11 +17,11 @@ public class LagrangianDual {
     Etc etc;
     //
     IloCplex cplex;
-    HashMap<ki, IloNumVar> y_ki;
-    HashMap<Index.kriT, IloNumVar> z_kriT;
-    HashMap<Index.kriN, IloNumVar> a_kriN;
-    HashMap<Index.krij, IloNumVar> x_krij;
-    HashMap<Index.kriT, IloNumVar> lm_kriT;
+    HashMap<AK, IloNumVar> y_ki;
+    HashMap<AEK, IloNumVar> z_kriT;
+    HashMap<AEI, IloNumVar> a_kriN;
+    HashMap<AEIJ, IloNumVar> x_krij;
+    HashMap<AEK, IloNumVar> lm_kriT;
     IloNumVar l;
 
     public LagrangianDual(Parameter _prmt, Etc _etc) {
@@ -43,18 +43,18 @@ public class LagrangianDual {
             IloNumVar y, z, x, lm;
             IloLinearNumExpr cnst;
             IloQuadNumExpr cnstQ;
-            Index.ki ki;
-            Index.kr kr;
-            Index.kriT kriT;
-            Index.krij krij;
+            AK AK;
+            AE kr;
+            AEK AEK;
+            AEIJ AEIJ;
             //
             cplex = new IloCplex();
-            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, a_kriN, x_krij);
-            for (int k : prmt.K) {
-                R = prmt.R_k.get(k);
+            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ki, z_kriT, x_krij, a_kriN);
+            for (int k : prmt.A) {
+                R = prmt.E_a.get(k);
                 for (int r : R) {
-                    for (int i : prmt.T) {
-                        lm_kriT.put(new Index.kriT(k, r, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("lm(%d,%d,%d)", k, r, i)));
+                    for (int i : prmt.K) {
+                        lm_kriT.put(new AEK(k, r, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("lm(%d,%d,%d)", k, r, i)));
                     }
                 }
             }
@@ -63,40 +63,40 @@ public class LagrangianDual {
             cplex.addMaximize(l);
             //
             cnst = cplex.linearNumExpr();
-            for (int i : prmt.T) {
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    w = prmt.w_i.get(i);
-                    y = y_ki.get(ki);
+            for (int i : prmt.K) {
+                for (int k : prmt.A) {
+                    AK = new AK(k, i);
+                    w = prmt.r_k.get(i);
+                    y = y_ki.get(AK);
                     cnst.addTerm(w, y);
-                    R = prmt.R_k.get(k);
+                    R = prmt.E_a.get(k);
                     for (int r : R) {
-                        kr = new Index.kr(k, r);
-                        kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.r_kr.get(kr);
-                        z = z_kriT.get(kriT);
+                        kr = new AE(k, r);
+                        AEK = new AEK(k, r, i);
+                        gamma = prmt.p_ae.get(kr);
+                        z = z_kriT.get(AEK);
                         cnst.addTerm(-(w * gamma), z);
                     }
                 }
             }
             cnstQ = cplex.quadNumExpr();
-            for (int i : prmt.T) {
+            for (int i : prmt.K) {
                 iP = String.format("p%d", i);
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    y = y_ki.get(ki);
-                    R = prmt.R_k.get(k);
+                for (int k : prmt.A) {
+                    AK = new AK(k, i);
+                    y = y_ki.get(AK);
+                    R = prmt.E_a.get(k);
                     for (int r : R) {
-                        kr = new Index.kr(k, r);
-                        kriT = new Index.kriT(k, r, i);
-                        krN = prmt.N_kr.get(kr);
-                        lm = lm_kriT.get(kriT);
+                        kr = new AE(k, r);
+                        AEK = new AEK(k, r, i);
+                        krN = prmt.N_ae.get(kr);
+                        lm = lm_kriT.get(AEK);
                         for (String j: krN) {
-                            krij = new Index.krij(k, r, iP, j);
-                            x = x_krij.get(krij);
+                            AEIJ = new AEIJ(k, r, iP, j);
+                            x = x_krij.get(AEIJ);
                             cnstQ.addTerm(1.0, lm, x);
                         }
-                        z = z_kriT.get(kriT);
+                        z = z_kriT.get(AEK);
                         cnstQ.addTerm(1.0, lm, z);
                         cnstQ.addTerm(-1.0, lm, y);
                     }
@@ -105,7 +105,7 @@ public class LagrangianDual {
             cplex.addGe(l, cplex.sum(cnst, cnstQ), "epigraphForm");
             //
             ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
-            ModelBuilder.def_Routing_cnsts(prmt, cplex, a_kriN, x_krij); //Q2
+            ModelBuilder.def_Routing_cnsts(prmt, cplex, x_krij, a_kriN); //Q2
         } catch (Exception ex) {
             ex.printStackTrace();
         }

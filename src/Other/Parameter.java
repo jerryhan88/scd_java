@@ -1,5 +1,8 @@
 package Other;
 
+import Index.AE;
+import Index.AEIJ;
+import Index.IJ;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -14,26 +17,30 @@ import java.util.Set;
 public class Parameter implements Serializable {
     public String problemName;
     public ArrayList<Integer> H = new ArrayList<>();
-    public ArrayList<Integer> T = new ArrayList<>();
-    public ArrayList<String> h_i = new ArrayList<>();
-    public ArrayList<String> n_i = new ArrayList<>();
-    public ArrayList<Double> w_i = new ArrayList<>();
-    public ArrayList<String> N = new ArrayList<>();
     public ArrayList<Integer> K = new ArrayList<>();
+    public ArrayList<String> h_k = new ArrayList<>();
+    public ArrayList<String> n_k = new ArrayList<>();
     public ArrayList<Double> v_k = new ArrayList<>();
-    public ArrayList<ArrayList> R_k = new ArrayList<>();
-    public HashMap<Index.kr, Double> r_kr = new HashMap<>();
-    public HashMap<Index.kr, Double> l_kr = new HashMap<>();
-    public HashMap<Index.kr, Double> u_kr = new HashMap<>();
-    public HashMap<Index.kr, ArrayList> C_kr = new HashMap<>();
-    public HashMap<Index.kr, ArrayList> N_kr = new HashMap<>();
-    public HashMap<Index.kr, ArrayList> F_kr = new HashMap<>();
-    public HashMap<Index.krij, Long> p_krij = new HashMap<>();
-    public HashMap<String, Double> a_i = new HashMap<>();
-    public HashMap<String, Double> b_i = new HashMap<>();
-    public HashMap<String, Double> c_i = new HashMap<>();
-    public HashMap<Index.ij, Double> t_ij = new HashMap<>();
-    public HashMap<Index.kr, ArrayList> uF_kr = new HashMap<>();
+    public ArrayList<Double> w_k = new ArrayList<>();
+    public ArrayList<Double> r_k = new ArrayList<>();
+    public ArrayList<String> N = new ArrayList<>();
+    public ArrayList<Integer> A = new ArrayList<>();
+    public ArrayList<Double> v_a = new ArrayList<>();
+    public ArrayList<Double> w_a = new ArrayList<>();
+    public ArrayList<ArrayList> E_a = new ArrayList<>();
+    public HashMap<AE, Double> p_ae = new HashMap<>();
+    public HashMap<AE, Double> l_ae = new HashMap<>();
+    public HashMap<AE, Double> u_ae = new HashMap<>();
+    public HashMap<AE, ArrayList> S_ae = new HashMap<>();
+    public HashMap<AE, ArrayList> N_ae = new HashMap<>();
+
+    public HashMap<AEIJ, Long> c_aeij = new HashMap<>();
+    public HashMap<String, Double> al_i = new HashMap<>();
+    public HashMap<String, Double> be_i = new HashMap<>();
+    public HashMap<String, Double> ga_i = new HashMap<>();
+    public HashMap<IJ, Double> t_ij = new HashMap<>();
+    public HashMap<AE, ArrayList> F_ae = new HashMap<>();
+    public HashMap<AE, ArrayList> uF_ae = new HashMap<>();
 
 
     public void savePrmt(Path fpath) {
@@ -72,96 +79,99 @@ public class Parameter implements Serializable {
             //
             _prmt.problemName = (String) jsonBase.get("problemName");
             parseJsonArray(jsonBase, _prmt.H, "H", "I");
-            parseJsonArray(jsonBase, _prmt.T, "T", "I");
-            parseJsonArray(jsonBase, _prmt.h_i, "h_i", "S");
-            parseJsonArray(jsonBase, _prmt.n_i, "n_i", "S");
-            parseJsonArray(jsonBase, _prmt.w_i, "w_i", "D");
-            parseJsonArray(jsonBase, _prmt.N, "N", "S");
             parseJsonArray(jsonBase, _prmt.K, "K", "I");
+            parseJsonArray(jsonBase, _prmt.h_k, "h_k", "S");
+            parseJsonArray(jsonBase, _prmt.n_k, "n_k", "S");
             parseJsonArray(jsonBase, _prmt.v_k, "v_k", "D");
-            JSONArray arrayOut = (JSONArray) jsonBase.get("R_k");
+            parseJsonArray(jsonBase, _prmt.w_k, "w_k", "D");
+            parseJsonArray(jsonBase, _prmt.r_k, "r_k", "D");
+            parseJsonArray(jsonBase, _prmt.N, "N", "S");
+            parseJsonArray(jsonBase, _prmt.A, "A", "I");
+            parseJsonArray(jsonBase, _prmt.v_a, "v_a", "D");
+            parseJsonArray(jsonBase, _prmt.w_a, "w_a", "D");
+            JSONArray arrayOut = (JSONArray) jsonBase.get("E_a");
             for (Object anArrayOut : arrayOut) {
                 JSONArray arrayIn = (JSONArray) anArrayOut;
                 ArrayList<Integer> arrayInNew = new ArrayList<>();
                 for (Object anArrayIn : arrayIn) {
                     arrayInNew.add(((Long) anArrayIn).intValue());
                 }
-                _prmt.R_k.add(arrayInNew);
+                _prmt.E_a.add(arrayInNew);
             }
             //
-            JSONObject _C_kr = (JSONObject) jsonBase.get("C_kr");
-            JSONObject _N_kr = (JSONObject) jsonBase.get("N_kr");
-            JSONObject _F_kr = (JSONObject) jsonBase.get("F_kr");
-            JSONObject _r_kr = (JSONObject) jsonBase.get("r_kr");
-            JSONObject _l_kr = (JSONObject) jsonBase.get("l_kr");
-            JSONObject _u_kr = (JSONObject) jsonBase.get("u_kr");
+            JSONObject _S_ae = (JSONObject) jsonBase.get("S_ae");
+            JSONObject _N_ae = (JSONObject) jsonBase.get("N_ae");
+            JSONObject _p_ae = (JSONObject) jsonBase.get("p_ae");
+            JSONObject _l_kr = (JSONObject) jsonBase.get("l_ae");
+            JSONObject _u_kr = (JSONObject) jsonBase.get("u_ae");
+            JSONObject _F_ae = (JSONObject) jsonBase.get("F_ae");
             //
-            int k, r;
-            Index.kr kr;
+            int a, e;
+            AE ae;
             JSONArray arrayJ;
-            for (String key: (Set<String>) _C_kr.keySet()) {
+            for (String key: (Set<String>) _S_ae.keySet()) {
                 String[] _key = key.split("&");
-                k = Integer.parseInt(_key[0]);
-                r = Integer.parseInt(_key[1]);
-                kr = new Index.kr(k, r);
+                a = Integer.parseInt(_key[0]);
+                e = Integer.parseInt(_key[1]);
+                ae = new AE(a, e);
                 //
-                ArrayList<String> krC = new ArrayList<>();
-                arrayJ = (JSONArray) _C_kr.get(key);
+                ArrayList<String> aeS = new ArrayList<>();
+                arrayJ = (JSONArray) _S_ae.get(key);
                 for (Object anArrayJ : arrayJ) {
-                    krC.add((String) anArrayJ);
+                    aeS.add((String) anArrayJ);
                 }
-                _prmt.C_kr.put(kr, krC);
-                ArrayList<String> krN = new ArrayList<>();
-                arrayJ = (JSONArray) _N_kr.get(key);
+                _prmt.S_ae.put(ae, aeS);
+                ArrayList<String> aeN = new ArrayList<>();
+                arrayJ = (JSONArray) _N_ae.get(key);
                 for (Object anArrayJ : arrayJ) {
-                    krN.add((String) anArrayJ);
+                    aeN.add((String) anArrayJ);
                 }
-                _prmt.N_kr.put(kr, krN);
+                _prmt.N_ae.put(ae, aeN);
                 //
-                ArrayList<Integer> krF = new ArrayList<>();
-                arrayJ = (JSONArray) _F_kr.get(key);
+                ArrayList<Integer> aeF = new ArrayList<>();
+                arrayJ = (JSONArray) _F_ae.get(key);
                 for (Object anArrayJ : arrayJ) {
-                    krF.add(((Long) anArrayJ).intValue());
+                    aeF.add(((Long) anArrayJ).intValue());
                 }
-                _prmt.F_kr.put(kr, krF);
+                _prmt.F_ae.put(ae, aeF);
                 //
-                _prmt.r_kr.put(kr, (double) _r_kr.get(key));
-                _prmt.l_kr.put(kr, (double) _l_kr.get(key));
-                _prmt.u_kr.put(kr, (double) _u_kr.get(key));
+                _prmt.p_ae.put(ae, (double) _p_ae.get(key));
+                _prmt.l_ae.put(ae, (double) _l_kr.get(key));
+                _prmt.u_ae.put(ae, (double) _u_kr.get(key));
             }
-            JSONObject _p_krij = (JSONObject) jsonBase.get("p_krij");
-            for (String key: (Set<String>) _p_krij.keySet()) {
+            JSONObject _c_aeij = (JSONObject) jsonBase.get("c_aeij");
+            for (String key: (Set<String>) _c_aeij.keySet()) {
                 String[] _key = key.split("&");
-                k = Integer.parseInt(_key[0]);
-                r = Integer.parseInt(_key[1]);
+                a = Integer.parseInt(_key[0]);
+                e = Integer.parseInt(_key[1]);
                 String i = _key[2];
                 String j = _key[3];
-                _prmt.p_krij.put(new Index.krij(k, r, i, j), (long) _p_krij.get(key));
+                _prmt.c_aeij.put(new AEIJ(a, e, i, j), (long) _c_aeij.get(key));
             }
-            parseJsonObject(jsonBase, _prmt.a_i, "a_i");
-            parseJsonObject(jsonBase, _prmt.b_i, "b_i");
-            parseJsonObject(jsonBase, _prmt.c_i, "c_i");
+            parseJsonObject(jsonBase, _prmt.al_i, "al_i");
+            parseJsonObject(jsonBase, _prmt.be_i, "be_i");
+            parseJsonObject(jsonBase, _prmt.ga_i, "ga_i");
             JSONObject _t_ij = (JSONObject) jsonBase.get("t_ij");
             for (String key: (Set<String>) _t_ij.keySet()) {
                 String [] ij = key.split("&");
-                _prmt.t_ij.put(new Index.ij(ij[0], ij[1]), (double) _t_ij.get(key));
+                _prmt.t_ij.put(new IJ(ij[0], ij[1]), (double) _t_ij.get(key));
             }
             //
-            Index.kr _kr;
-            ArrayList<Integer> kR;
-            HashSet<Integer> krF;
-            for (int _k : _prmt.K) {
-                kR = _prmt.R_k.get(_k);
-                for (int _r : kR) {
-                    _kr = new Index.kr(_k, _r);
-                    krF = new HashSet<>(_prmt.F_kr.get(_kr));
-                    ArrayList<Integer> kr_uF = new ArrayList<>();
-                    for (int _i: _prmt.T) {
-                        if (!krF.contains(_i)) {
-                            kr_uF.add(_i);
+            AE _ae;
+            ArrayList<Integer> aE;
+            HashSet<Integer> aeF;
+            for (int _a : _prmt.A) {
+                aE = _prmt.E_a.get(_a);
+                for (int _e : aE) {
+                    _ae = new AE(_a, _e);
+                    aeF = new HashSet<>(_prmt.F_ae.get(_ae));
+                    ArrayList<Integer> ae_uF = new ArrayList<>();
+                    for (int _k: _prmt.K) {
+                        if (!aeF.contains(_k)) {
+                            ae_uF.add(_k);
                         }
                     }
-                     _prmt.uF_kr.put(_kr, kr_uF);
+                     _prmt.uF_ae.put(_ae, ae_uF);
                 }
             }
         } catch (Exception ex) {

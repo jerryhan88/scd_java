@@ -1,9 +1,9 @@
 package Index;
 
-public class kriN extends IndexSupCls {
+public class AEI extends IndexSupCls {
     int k, r;
     String i;
-    public kriN(int _k, int _r, String _i) {
+    public AEI(int _k, int _r, String _i) {
         k = _k;
         r = _r;
         i = _i;

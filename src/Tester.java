@@ -9,9 +9,6 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 
 
 public class Tester {
@@ -19,7 +16,10 @@ public class Tester {
 //        /*
 
         Path dpath = Paths.get("_temp");
+
+
         String prefix = "ED_Ex0";
+//        String prefix = "g0-na010-nt015-sn00";
 //        String appName = "ILP";
 //        String appName = "SDA";
         String appName = "SDAbnb";
@@ -100,6 +100,9 @@ public class Tester {
                 } else if (appName.equals("SDA")) {
                     etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
                     app = new SubgradientDescentAlgorithm(prmt, etc);
+                } else if (appName.equals("SDAbnb")) {
+                    etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
+                    app = new SDA_BnB(prmt, etc);
                 } else {
                     throw new RuntimeException("Type proper an approach name, ILP or SDA");
                 }

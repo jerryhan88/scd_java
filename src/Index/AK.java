@@ -1,8 +1,8 @@
 package Index;
 
-public class ki extends IndexSupCls {
+public class AK extends IndexSupCls {
     int k, i;
-    public ki(int _k, int _i) {
+    public AK(int _k, int _i) {
         k = _k;
         i = _i;
         notation = String.format("[%d,%d]", k, i);

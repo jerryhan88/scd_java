@@ -1,6 +1,6 @@
 package Other;
 
-import ilog.cplex.IloCplex;
+import Index.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.json.simple.JSONObject;
@@ -18,10 +18,10 @@ public class Solution implements Serializable {
     public Parameter prmt;
     public Double objV, dualG;
     public Double cpuT, wallT;
-    public HashMap<Index.ki, Double> y_ki = new HashMap<>();
-    public HashMap<Index.kriT, Double> z_kriT = new HashMap<>();
-    public HashMap<Index.kriN, Double> a_kriN = new HashMap<>();
-    public HashMap<Index.krij, Double> x_krij = new HashMap<>();
+    public HashMap<AK, Double> y_ak = new HashMap<>();
+    public HashMap<AEK, Double> z_aek = new HashMap<>();
+    public HashMap<AEI, Double> mu_aei = new HashMap<>();
+    public HashMap<AEIJ, Double> x_aeij = new HashMap<>();
 
     public void saveSolSER(Path fpath) {
         try {
@@ -39,23 +39,23 @@ public class Solution implements Serializable {
         JSONObject _a_kriN = new JSONObject();
         JSONObject _x_krij = new JSONObject();
         //
-        for (Index.ki key: y_ki.keySet()) {
-            _y_ki.put(key.get_label(), y_ki.get(key));
+        for (AK key: y_ak.keySet()) {
+            _y_ki.put(key.get_label(), y_ak.get(key));
         }
-        for (Index.kriT key: z_kriT.keySet()) {
-            _z_kriT.put(key.get_label(), z_kriT.get(key));
+        for (AEK key: z_aek.keySet()) {
+            _z_kriT.put(key.get_label(), z_aek.get(key));
         }
-        for (Index.kriN key: a_kriN.keySet()) {
-            _a_kriN.put(key.get_label(), a_kriN.get(key));
+        for (AEI key: mu_aei.keySet()) {
+            _a_kriN.put(key.get_label(), mu_aei.get(key));
         }
-        for (Index.krij key: x_krij.keySet()) {
-            _x_krij.put(key.get_label(), x_krij.get(key));
+        for (AEIJ key: x_aeij.keySet()) {
+            _x_krij.put(key.get_label(), x_aeij.get(key));
         }
         base.put("objV", objV);
-        base.put("y_ki", _y_ki);
-        base.put("z_kriT", _z_kriT);
-        base.put("a_kriN", _a_kriN);
-        base.put("x_krij", _x_krij);
+        base.put("y_ak", _y_ki);
+        base.put("z_aek", _z_kriT);
+        base.put("mu_aei", _a_kriN);
+        base.put("x_aeij", _x_krij);
         //
         try {
             FileWriter file = new FileWriter(fpath.toFile());
@@ -93,69 +93,72 @@ public class Solution implements Serializable {
             logContents += "\n";
             //
             logContents += "Details\n";
-            Index.ki ki;
-            Index.kr kr;
-            Index.kriN kriN;
-            Index.krij krij;
-            ArrayList<Integer> kR;
-            ArrayList<String> krC, krN;
-            String o_kr, d_kr;
-            for (int k: prmt.K) {
+            AK ak;
+            AE ae;
+            AEI aei;
+            AEIJ aeij;
+            ArrayList<Integer> aE;
+            ArrayList<String> aeS, aeN;
+            String o_ae, d_ae;
+            for (int a: prmt.A) {
                 ArrayList<Integer> assignedTasks = new ArrayList<>();
                 ArrayList<String> _assignedTasks = new ArrayList<>();
-                Set<String> meaninglessNodes = new HashSet<>();
-                for (int i: prmt.T) {
-                    ki = new Index.ki(k, i);
-                    if (y_ki.get(ki) > 0.5) {
-                        assignedTasks.add(i);
-                        _assignedTasks.add(String.format("%d", i));
-                    } else {
-                        meaninglessNodes.add(prmt.h_i.get(i));
-                        meaninglessNodes.add(prmt.n_i.get(i));
+                Set<String> meaninglessNodes = new HashSet<>(prmt.N);
+                for (int k: prmt.K) {
+                    ak = new AK(a, k);
+                    if (y_ak.get(ak) > 0.5) {
+                        assignedTasks.add(k);
+                        _assignedTasks.add(String.format("%d", k));
+                        if (meaninglessNodes.contains(prmt.h_k.get(k))) {
+                            meaninglessNodes.remove(prmt.h_k.get(k));
+                        }
+                        if (meaninglessNodes.contains(prmt.n_k.get(k))) {
+                            meaninglessNodes.remove(prmt.n_k.get(k));
+                        }
                     }
                 }
-                logContents += String.format("A%d: ", k);
+                logContents += String.format("A%d: ", a);
                 logContents += "[" + String.join(",", _assignedTasks) + "]\n";
-                kR = prmt.R_k.get(k);
-                for (int r : kR) {
-                    kr = new Index.kr(k, r);
-                    krC = prmt.C_kr.get(kr);
-                    krN = prmt.N_kr.get(kr);
-                    o_kr = String.format("s0_%d_%d", k, r);
-                    d_kr = String.format("s%d_%d_%d", krC.size() - 1, k, r);
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    ae = new AE(a, e);
+                    aeS = prmt.S_ae.get(ae);
+                    aeN = prmt.N_ae.get(ae);
+                    o_ae = String.format("s0_%d_%d", a, e);
+                    d_ae = String.format("s%d_%d_%d", aeS.size() - 1, a, e);
                     HashMap<String, String> _route = new HashMap<>();
-                    for (String i: krN) {
-                        for (String j: krN) {
-                            krij = new Index.krij(k, r, i, j);
-                            if (x_krij.get(krij) > 0.5) {
+                    for (String i: aeN) {
+                        for (String j: aeN) {
+                            aeij = new AEIJ(a, e, i, j);
+                            if (x_aeij.get(aeij) > 0.5) {
                                 _route.put(i, j);
                             }
                         }
                     }
-                    String i = o_kr;
+                    String i = o_ae;
                     String route = "";
                     ArrayList<String> _accomplishedTasks = new ArrayList<>();
-                    while (!i.equals(d_kr)) {
+                    while (!i.equals(d_ae)) {
                         if (!meaninglessNodes.contains(i)) {
-                            kriN = new Index.kriN(k, r, i);
-                            route += String.format("%s(%.2f)-", i, a_kriN.get(kriN));
+                            aei = new AEI(a, e, i);
+                            route += String.format("%s(%.2f)-", i, mu_aei.get(aei));
                             if (i.startsWith("n")) {
                                 _accomplishedTasks.add(i.substring("n".length()));
                             }
                         }
                         i = _route.get(i);
                     }
-                    kriN = new Index.kriN(k, r, i);
-                    route += String.format("%s(%.2f)", i, a_kriN.get(kriN));
-                    logContents += String.format("\t R%d%s: %s\n", r,
+                    aei = new AEI(a, e, i);
+                    route += String.format("%s(%.2f)", i, mu_aei.get(aei));
+                    logContents += String.format("\t R%d%s: %s\n", e,
                             "[" + String.join(",", _accomplishedTasks) + "]"
                             , route);
                 }
             }
             bw.write(logContents);
             bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 

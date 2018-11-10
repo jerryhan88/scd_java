@@ -1,8 +1,8 @@
 package Index;
 
-public class kriT extends IndexSupCls {
+public class AEK extends IndexSupCls {
     int k, r, i;
-    public kriT(int _k, int _r, int _i) {
+    public AEK(int _k, int _r, int _i) {
         k = _k;
         r = _r;
         i = _i;

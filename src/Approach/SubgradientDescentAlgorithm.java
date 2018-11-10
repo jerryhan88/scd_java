@@ -1,10 +1,9 @@
 package Approach;
 
-import Index.ki;
+import Index.*;
 import Other.Parameter;
 import Other.Etc;
 
-import Index.kriT;
 import Other.Solution;
 import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
@@ -20,37 +19,39 @@ import java.util.HashMap;
 
 
 public class SubgradientDescentAlgorithm extends ApproachSupClass {
-    static int NUM_ITERS_LIMIT = 10;
+    static int NUM_ITERS_LIMIT = 5;
     static double DUAL_GAP_LIMIT = 0.001;
     //
     Parameter prmt;
     Etc etc;
     IloCplex cplex;
-    double a, u, dualObjV0, F_star;
-    double dualObjV1, ObjV_TAA, objV_Routing;
     int numIters, noImpvLimits, noUpdateCounter;
-    HashMap<kriT, Double> _lm_kriT = new HashMap<>();
-    HashMap<Index.ki, Double> _y_ki = new HashMap<>();
-    HashMap<Index.kriT, Double> _z_kriT = new HashMap<>();
-    HashMap<Index.kriN, Double> _a_kriN = new HashMap<>();
-    public HashMap<Index.krij, Double> _x_krij = new HashMap<>();
+    double at, ut, dualObjV0, F_star;
+    double dualObjV1, ObjV_TAA, objV_Routing;
+    Solution bestSol;
+    HashMap<AEK, Double> _lm_aek = new HashMap<>();
+    HashMap<AK, Double> _y_ak = new HashMap<>();
+    HashMap<AEK, Double> _z_aek = new HashMap<>();
+    public HashMap<AEIJ, Double> _x_aeij = new HashMap<>();
+    HashMap<AEI, Double> _mu_aei = new HashMap<>();
+
 
     public SubgradientDescentAlgorithm(Parameter _prmt, Etc _etc) {
         prmt = _prmt;
         etc = _etc;
-        a = 0.0;
-        u = 2.0;
+        at = 0.0;
+        ut = 2.0;
         dualObjV0 = Double.MAX_VALUE;
         F_star = -Double.MAX_VALUE;
         numIters = 0;
         noImpvLimits = 5;
         noUpdateCounter = 0;
-        ArrayList<Integer> kR;
-        for (int k : prmt.K) {
-            kR = prmt.R_k.get(k);
-            for (int r : kR) {
-                for (int i : prmt.T) {
-                    _lm_kriT.put(new Index.kriT(k, r, i), 0.0);
+        ArrayList<Integer> aE;
+        for (int a : prmt.A) {
+            aE = prmt.E_a.get(a);
+            for (int e : aE) {
+                for (int k : prmt.K) {
+                    _lm_aek.put(new AEK(a, e, k), 0.0);
                 }
             }
         }
@@ -84,21 +85,11 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             numIters += 1;
             System.out.println(numIters + ": " + etc.getCpuTime() + "  " +etc.getWallTime());
         }
-        Solution sol = new Solution();
-        sol.prmt = prmt;
-        sol.objV = F_star;
-        sol.dualG = dualObjV0 - F_star;
-        sol.cpuT = etc.getCpuTime();
-        sol.wallT = etc.getWallTime();
-        sol.y_ki = _y_ki;
-        sol.z_kriT = _z_kriT;
-        sol.a_kriN = _a_kriN;
-        sol.x_krij = _x_krij;
         //
-        sol.saveSolJSN(etc.solPathJSN);
-        sol.saveSolSER(etc.solPathSER);
-        sol.saveSolCSV(etc.solPathCSV);
-        sol.saveSolTXT(etc.solPathTXT);
+        bestSol.saveSolJSN(etc.solPathJSN);
+        bestSol.saveSolCSV(etc.solPathCSV);
+        bestSol.saveSolTXT(etc.solPathTXT);
+//        bestSol.saveSolSER(etc.solPathSER);
     }
     private void solveDuals() {
         dualObjV1 = 0.0;
@@ -114,57 +105,57 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
 
     private void solve_TAA() {
         double lm;
-        double w, gamma;
-        ArrayList<Integer> kR;
+        double r, p;
+        ArrayList<Integer> aE;
         IloNumVar y, z;
         IloLinearNumExpr obj;
-        Index.ki ki;
-        Index.kr kr;
-        Index.kriT kriT;
+        AK ak;
+        AE ae;
+        AEK aek;
         //
-        HashMap<ki, IloNumVar> y_ki = new HashMap<>();
-        HashMap<Index.kriT, IloNumVar> z_kriT = new HashMap<>();
+        HashMap<AK, IloNumVar> y_ak = new HashMap<>();
+        HashMap<AEK, IloNumVar> z_aek = new HashMap<>();
         // Solve an task assignment and accomplishment problem
         try {
             cplex = new IloCplex();
-            for (int k : prmt.K) {
-                for (int i : prmt.T) {
-                    y_ki.put(new Index.ki(k, i), cplex.boolVar(String.format("y(%d,%d)", k, i)));
+            for (int a : prmt.A) {
+                for (int k : prmt.K) {
+                    y_ak.put(new AK(a, k), cplex.boolVar(String.format("y(%d,%d)", a, k)));
                 }
-                kR = prmt.R_k.get(k);
-                for (int r : kR) {
-                    for (int i : prmt.T) {
-                        z_kriT.put(new Index.kriT(k, r, i), cplex.boolVar(String.format("z(%d,%d,%d)", k, r, i)));
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    for (int k : prmt.K) {
+                        z_aek.put(new AEK(a, e, k), cplex.boolVar(String.format("z(%d,%d,%d)", a, e, k)));
                     }
                 }
             }
             //
             obj = cplex.linearNumExpr();
-            for (int i : prmt.T) {
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    w = prmt.w_i.get(i);
-                    y = y_ki.get(ki);
-                    obj.addTerm(w, y);
-                    kR = prmt.R_k.get(k);
-                    for (int r : kR) {
-                        kr = new Index.kr(k, r);
-                        kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.r_kr.get(kr);
-                        z = z_kriT.get(kriT);
-                        obj.addTerm(-(w * gamma), z);
+            for (int k : prmt.K) {
+                for (int a : prmt.A) {
+                    ak = new AK(a, k);
+                    r = prmt.r_k.get(k);
+                    y = y_ak.get(ak);
+                    obj.addTerm(r, y);
+                    aE = prmt.E_a.get(a);
+                    for (int e : aE) {
+                        ae = new AE(a, e);
+                        aek = new AEK(a, e, k);
+                        p = prmt.p_ae.get(ae);
+                        z = z_aek.get(aek);
+                        obj.addTerm(-(r * p), z);
                     }
                 }
             }
-            for (int i : prmt.T) {
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    y = y_ki.get(ki);
-                    kR = prmt.R_k.get(k);
-                    for (int r : kR) {
-                        kriT = new Index.kriT(k, r, i);
-                        lm = _lm_kriT.get(kriT);
-                        z = z_kriT.get(kriT);
+            for (int k : prmt.K) {
+                for (int a : prmt.A) {
+                    ak = new AK(a, k);
+                    y = y_ak.get(ak);
+                    aE = prmt.E_a.get(a);
+                    for (int e : aE) {
+                        aek = new AEK(a, e, k);
+                        lm = _lm_aek.get(aek);
+                        z = z_aek.get(aek);
                         obj.addTerm(lm, z);
                         obj.addTerm(-lm, y);
                     }
@@ -172,17 +163,17 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             }
             cplex.addMaximize(obj);
             //
-            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
             //
             cplex.setOut(null);
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 ObjV_TAA = cplex.getObjValue();
-                for (Index.ki key: y_ki.keySet()) {
-                    _y_ki.put(key, cplex.getValue(y_ki.get(key)));
+                for (AK key: y_ak.keySet()) {
+                    _y_ak.put(key, cplex.getValue(y_ak.get(key)));
                 }
-                for (Index.kriT key: z_kriT.keySet()) {
-                    _z_kriT.put(key, cplex.getValue(z_kriT.get(key)));
+                for (AEK key: z_aek.keySet()) {
+                    _z_aek.put(key, cplex.getValue(z_aek.get(key)));
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -195,65 +186,65 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
 
     public void solve_Routing() {
         double lm;
-        ArrayList<Integer> kR;
-        ArrayList<String> krN;
+        ArrayList<Integer> aE;
+        ArrayList<String> aeN;
         IloNumVar x;
         IloLinearNumExpr obj;
-        Index.kr kr;
-        Index.kriT kriT;
-        Index.krij krij;
+        AE ae;
+        AEK aek;
+        AEIJ aeij;
         try {
-            for (int k : prmt.K) {
-                kR = prmt.R_k.get(k);
-                for (int r : kR) {
-                    kr = new Index.kr(k, r);
-                    krN = prmt.N_kr.get(kr);
-                    HashMap<Index.kriN, IloNumVar> a_kriN = new HashMap<>();
-                    HashMap<Index.krij, IloNumVar> x_krij = new HashMap<>();
+            for (int a : prmt.A) {
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    ae = new AE(a, e);
+                    aeN = prmt.N_ae.get(ae);
+                    HashMap<AEIJ, IloNumVar> x_aeij = new HashMap<>();
+                    HashMap<AEI, IloNumVar> mu_aei = new HashMap<>();
                     //
                     cplex = new IloCplex();
-                    for (String i: krN) {
-                        for (String j: krN) {
-                            x_krij.put(new Index.krij(k, r, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", k, r, i, j)));
+                    for (String i: aeN) {
+                        for (String j: aeN) {
+                            x_aeij.put(new AEIJ(a, e, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", a, e, i, j)));
                         }
-                        a_kriN.put(new Index.kriN(k, r, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("a(%d,%d,%s)", k, r, i)));
+                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("at(%d,%d,%s)", a, e, i)));
                     }
                     //
                     obj = cplex.linearNumExpr();
-                    for (int i : prmt.T) {
-                        kriT = new Index.kriT(k, r, i);
-                        lm = _lm_kriT.get(kriT);
-                        for (String j: krN) {
-                            krij = new Index.krij(k, r, prmt.n_i.get(i), j);
-                            x = x_krij.get(krij);
+                    for (int k : prmt.K) {
+                        aek = new AEK(a, e, k);
+                        lm = _lm_aek.get(aek);
+                        for (String j: aeN) {
+                            aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
+                            x = x_aeij.get(aeij);
                             obj.addTerm(lm, x);
                         }
                     }
                     cplex.addMaximize(obj);
                     //
-                    ModelBuilder.def_FC_cnsts_krGiven(prmt, k, r, cplex, x_krij);
-                    ModelBuilder.def_AT_cnsts_krGiven(prmt, k, r, cplex, a_kriN, x_krij);
+                    ModelBuilder.def_FC_cnsts_aeGiven(prmt, a, e, cplex, x_aeij);
+                    ModelBuilder.def_AT_cnsts_aeGiven(prmt, a, e, cplex, x_aeij, mu_aei);
                     //
                     cplex.setOut(null);
                     cplex.solve();
                     if (cplex.getStatus() == IloCplex.Status.Optimal) {
                         try {
                             objV_Routing += cplex.getObjValue();
-                            for (Index.krij key: x_krij.keySet()) {
-                                _x_krij.put(key, cplex.getValue(x_krij.get(key)));
+                            for (AEIJ key: x_aeij.keySet()) {
+                                _x_aeij.put(key, cplex.getValue(x_aeij.get(key)));
                             }
-                            for (Index.kriN key: a_kriN.keySet()) {
-                                _a_kriN.put(key, cplex.getValue(a_kriN.get(key)));
+                            for (AEI key: mu_aei.keySet()) {
+                                _mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
                             }
-                        } catch (IloException e) {
-                            e.printStackTrace();
+                        } catch (IloException ex) {
+                            ex.printStackTrace();
                         }
                     } else {
                         cplex.output().println("Other.Solution status = " + cplex.getStatus());
                     }
                     cplex.end();
                     logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                            "solveDuals", String.format("solve_Routing (%d&%d)", k, r)});
+                            "solveDuals", String.format("solve_Routing (%d&%d)", a, e)});
                 }
             }
         } catch (Exception ex) {
@@ -262,72 +253,71 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     }
 
     private void primalExtraction() {
-        double w, gamma, objV;
-        ArrayList<Integer> kR;
-        ArrayList<String> krN;
+        double r, p, objV;
+        ArrayList<Integer> aE;
+        ArrayList<String> aeN;
         IloLinearNumExpr obj, cnst;
         IloNumVar y, z;
-        Index.ki ki;
-        Index.kr kr;
-        Index.kriT kriT;
-        Index.krij krij;
-        HashMap<Index.ki, IloNumVar> y_ki = new HashMap<>();
-        HashMap<Index.kriT, IloNumVar> z_kriT = new HashMap<>();
+        AK ak;
+        AE ae;
+        AEK aek;
+        AEIJ aeij;
+        HashMap<AK, IloNumVar> y_ak = new HashMap<>();
+        HashMap<AEK, IloNumVar> z_aek = new HashMap<>();
         try {
             cplex = new IloCplex();
-            for (int k : prmt.K) {
-                for (int i : prmt.T) {
-                    y_ki.put(new Index.ki(k, i), cplex.boolVar(String.format("y(%d,%d)", k, i)));
+            for (int a : prmt.A) {
+                for (int k : prmt.K) {
+                    y_ak.put(new AK(a, k), cplex.boolVar(String.format("y(%d,%d)", a, k)));
                 }
-                kR = prmt.R_k.get(k);
-                for (int r : kR) {
-                    for (int i : prmt.T) {
-                        z_kriT.put(new Index.kriT(k, r, i), cplex.boolVar(String.format("z(%d,%d,%d)", k, r, i)));
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    for (int k : prmt.K) {
+                        z_aek.put(new AEK(a, e, k), cplex.boolVar(String.format("z(%d,%d,%d)", a, e, k)));
                     }
                 }
             }
             //
             obj = cplex.linearNumExpr();
-            for (int i : prmt.T) {
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    w = prmt.w_i.get(i);
-                    y = y_ki.get(ki);
-                    obj.addTerm(w, y);
-                    kR = prmt.R_k.get(k);
-                    for (int r : kR) {
-                        kr = new Index.kr(k, r);
-                        kriT = new Index.kriT(k, r, i);
-                        gamma = prmt.r_kr.get(kr);
-                        z = z_kriT.get(kriT);
-                        obj.addTerm(-(w * gamma), z);
+            for (int k : prmt.K) {
+                for (int a : prmt.A) {
+                    ak = new AK(a, k);
+                    r = prmt.r_k.get(k);
+                    y = y_ak.get(ak);
+                    obj.addTerm(r, y);
+                    aE = prmt.E_a.get(a);
+                    for (int e : aE) {
+                        ae = new AE(a, e);
+                        aek = new AEK(a, e, k);
+                        p = prmt.p_ae.get(ae);
+                        z = z_aek.get(aek);
+                        obj.addTerm(-(r * p), z);
                     }
                 }
             }
             cplex.addMaximize(obj);
             //
-            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ki, z_kriT); //Q1
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
             // Complicated and Combined constraints Q3
-            for (int i: prmt.T) {
-                for (int k : prmt.K) {
-                    ki = new Index.ki(k, i);
-                    y = y_ki.get(ki);
-                    kR = prmt.R_k.get(k);
-                    for (int r : kR) {
-                        kr = new Index.kr(k, r);
-                        kriT = new Index.kriT(k, r, i);
-                        z = z_kriT.get(kriT);
-                        //
+            for (int a : prmt.A) {
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    ae = new AE(a, e);
+                    aeN = prmt.N_ae.get(ae);
+                    for (int k: prmt.K) {
+                        ak = new AK(a, k);
+                        aek = new AEK(a, e, k);
                         cnst = cplex.linearNumExpr();
+                        y = y_ak.get(ak);
                         cnst.addTerm(1, y);
-                        cnst.addTerm(-1, z);
                         double sumX = 0;
-                        krN = prmt.N_kr.get(kr);
-                        for (String j: krN) {
-                            krij = new Index.krij(k, r, prmt.n_i.get(i), j);
-                            sumX += _x_krij.get(krij);
+                        for (String j: aeN) {
+                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                            sumX += _x_aeij.get(aeij);
                         }
-                        cplex.addLe(cnst, sumX, String.format("CC(%d,%d,%d)", i, k, r));
+                        z = z_aek.get(aek);
+                        cnst.addTerm(-1, z);
+                        cplex.addLe(cnst, sumX, String.format("CC(%d,%d,%d)", a, e, k));
                     }
                 }
             }
@@ -338,6 +328,23 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 objV = cplex.getObjValue();
                 if (objV > F_star) {
                     F_star = objV;
+                    //
+                    bestSol = new Solution();
+                    bestSol.prmt = prmt;
+                    bestSol.objV = F_star;
+                    bestSol.dualG = ((dualObjV1 < dualObjV0 ? dualObjV1 : dualObjV0) - F_star) / F_star;
+                    bestSol.cpuT = etc.getCpuTime();
+                    bestSol.wallT = etc.getWallTime();
+                    bestSol.y_ak = new HashMap<>();
+                    for (AK key: y_ak.keySet()) {
+                        bestSol.y_ak.put(key, cplex.getValue(y_ak.get(key)));
+                    }
+                    bestSol.z_aek = new HashMap<>(_z_aek);
+                    for (AEK key: z_aek.keySet()) {
+                        bestSol.z_aek.put(key, cplex.getValue(z_aek.get(key)));
+                    }
+                    bestSol.mu_aei = new HashMap<>(_mu_aei);
+                    bestSol.x_aeij = new HashMap<>(_x_aeij);
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -348,21 +355,20 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         }
         logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
                 "primalExtraction", "-"});
-
     }
 
     private void UpdateLM() {
         double y, z;
         double lm;
-        ArrayList<Integer> R;
-        ArrayList<String> krN;
-        Index.ki ki;
-        Index.kr kr;
-        Index.kriT kriT;
-        Index.krij krij;
+        ArrayList<Integer> aE;
+        ArrayList<String> aeN;
+        AK ak;
+        AE ae;
+        AEK aek;
+        AEIJ aeij;
 
-        // Update u (kind of temperature)
-        //   dualObjV1: a new value
+        // Update ut (kind of temperature)
+        //   dualObjV1: at new value
         //   dualObjV0: the old one
         if (dualObjV1 < dualObjV0) {
             // Better solution
@@ -371,58 +377,58 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             // No improvement
             noUpdateCounter += 1;
             if (noUpdateCounter == noImpvLimits) {
-                u *= 0.5;
+                ut *= 0.5;
                 noUpdateCounter = 0;
             }
         }
 
-        // Update a (Scale for the movement)
-        double denominator = u * (dualObjV0 - F_star);
+        // Update at (Scale for the movement)
+        double denominator = ut * (dualObjV0 - F_star);
         double numerator2 = 0.0;
-        for (int i: prmt.T) {
-            for (int k: prmt.K) {
-                ki = new Index.ki(k, i);
-                y = _y_ki.get(ki);
-                R = prmt.R_k.get(k);
-                for (int r : R) {
-                    kr = new Index.kr(k, r);
-                    kriT = new Index.kriT(k, r, i);
-                    z = _z_kriT.get(kriT);
-                    krN = prmt.N_kr.get(kr);
+        for (int k: prmt.K) {
+            for (int a: prmt.A) {
+                ak = new AK(a, k);
+                y = _y_ak.get(ak);
+                aE = prmt.E_a.get(a);
+                for (int e : aE) {
+                    ae = new AE(a, e);
+                    aek = new AEK(a, e, k);
+                    z = _z_aek.get(aek);
+                    aeN = prmt.N_ae.get(ae);
                     double sumX = 0.0;
-                    for (String j: krN) {
-                        krij = new Index.krij(k, r, prmt.n_i.get(i), j);
-                        sumX += _x_krij.get(krij);
+                    for (String j: aeN) {
+                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                        sumX += _x_aeij.get(aeij);
                     }
                     numerator2 += Math.pow(sumX + z - y, 2);
                 }
             }
         }
-        a = denominator / Math.sqrt(numerator2);
+        at = denominator / Math.sqrt(numerator2);
 
         // Update multipliers
-        for (int i : prmt.T) {
-            for (int k : prmt.K) {
-                ki = new Index.ki(k, i);
-                y = _y_ki.get(ki);
-                R = prmt.R_k.get(k);
-                for (int r : R) {
-                    kr = new Index.kr(k, r);
-                    kriT = new Index.kriT(k, r, i);
-                    z = _z_kriT.get(kriT);
-                    krN = prmt.N_kr.get(kr);
+        for (int k: prmt.K) {
+            for (int a: prmt.A) {
+                ak = new AK(a, k);
+                y = _y_ak.get(ak);
+                aE = prmt.E_a.get(a);
+                for (int e: aE) {
+                    ae = new AE(a, e);
+                    aek = new AEK(a, e, k);
+                    z = _z_aek.get(aek);
+                    aeN = prmt.N_ae.get(ae);
                     double sumX = 0.0;
-                    for (String j: krN) {
-                        krij = new Index.krij(k, r, prmt.n_i.get(i), j);
-                        sumX += _x_krij.get(krij);
+                    for (String j: aeN) {
+                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                        sumX += _x_aeij.get(aeij);
                     }
-                    lm = _lm_kriT.get(kriT) - a * (sumX + z - y);
+                    lm = _lm_aek.get(aek) - at * (sumX + z - y);
                     if (lm < 0.0) {
-                        _lm_kriT.put(kriT, 0.0);
+                        _lm_aek.put(aek, 0.0);
                     } else {
-                        _lm_kriT.put(kriT, lm);
+                        _lm_aek.put(aek, lm);
                     }
-                    _lm_kriT.put(kriT, lm);
+                    _lm_aek.put(aek, lm);
                 }
             }
         }

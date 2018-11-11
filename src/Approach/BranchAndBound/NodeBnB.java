@@ -84,6 +84,8 @@ class NodeBnB {
                 if (tree.a_w < currentWeight + tree.prmt.w_k.get(tid))
                     continue;
                 ArrayList<String> best_sequence = get_best_sequence(tid, seqIndex4Search);
+                if (best_sequence == null)
+                    continue;
                 if (get_travelTime(best_sequence) - tree.ae_l <= tree.ae_u) {
                     ArrayList<Integer> KnP1 = new ArrayList<>(KnP);
                     KnP1.add(tid);

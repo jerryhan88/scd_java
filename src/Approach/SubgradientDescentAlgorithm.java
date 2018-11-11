@@ -19,8 +19,8 @@ import java.util.HashMap;
 
 
 public class SubgradientDescentAlgorithm extends ApproachSupClass {
-    static int NUM_ITERS_LIMIT = 5;
-    static double DUAL_GAP_LIMIT = 0.001;
+    static int NUM_ITERS_LIMIT = 20;
+    static double DUAL_GAP_LIMIT_PERCENT = 0.05;
     //
     Parameter prmt;
     Etc etc;
@@ -81,7 +81,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             solveDuals();
             primalExtraction();
             UpdateLM();
-            if ((dualObjV0 - F_star) <= DUAL_GAP_LIMIT) break;
+            if ((dualObjV0 - F_star) / F_star <= DUAL_GAP_LIMIT_PERCENT) break;
             numIters += 1;
             System.out.println(numIters + ": " + etc.getCpuTime() + "  " +etc.getWallTime());
         }
@@ -97,10 +97,10 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         objV_Routing = 0.0;
         //
         solve_TAA();
-        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                "solveDuals", "solve_TAA"});
         solve_Routing();
         dualObjV1 = ObjV_TAA + objV_Routing;
+        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                "solveDuals", String.format("DualObjV: %f", dualObjV1)});
     }
 
     private void solve_TAA() {
@@ -179,6 +179,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
+            logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                    "solveDuals", "solve_TAA"});
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -207,7 +209,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                         for (String j: aeN) {
                             x_aeij.put(new AEIJ(a, e, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", a, e, i, j)));
                         }
-                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("at(%d,%d,%s)", a, e, i)));
+                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%d,%d,%s)", a, e, i)));
                     }
                     //
                     obj = cplex.linearNumExpr();
@@ -350,11 +352,11 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
+            logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
+                    "primalExtraction", String.format("F*: %f", F_star)});
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                "primalExtraction", "-"});
     }
 
     private void UpdateLM() {
@@ -433,6 +435,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             }
         }
         logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                "UpdateLM", "-"});
+                "UpdateLM", String.format("a_t: %f", at)});
     }
 }

@@ -69,9 +69,9 @@ public class TreeBnB implements Runnable{
         //
         x_aeij = new HashMap<>();
         mu_aei = new HashMap<>();
-        ArrayList<String> krN = prmt.N_ae.get(new AE(a, e));
-        for (String i: krN) {
-            for (String j: krN) {
+        ArrayList<String> aeN = prmt.N_ae.get(new AE(a, e));
+        for (String i: aeN) {
+            for (String j: aeN) {
                 x_aeij.put(new AEIJ(a, e, i, j), 0.0);
             }
             mu_aei.put(new AEI(a, e, i), 0.0);

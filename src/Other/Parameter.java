@@ -9,10 +9,7 @@ import org.json.simple.parser.JSONParser;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class Parameter implements Serializable {
     public String problemName;
@@ -33,7 +30,6 @@ public class Parameter implements Serializable {
     public HashMap<AE, Double> u_ae = new HashMap<>();
     public HashMap<AE, ArrayList> S_ae = new HashMap<>();
     public HashMap<AE, ArrayList> N_ae = new HashMap<>();
-
     public HashMap<AEIJ, Long> c_aeij = new HashMap<>();
     public HashMap<String, Double> al_i = new HashMap<>();
     public HashMap<String, Double> be_i = new HashMap<>();
@@ -41,6 +37,7 @@ public class Parameter implements Serializable {
     public HashMap<IJ, Double> t_ij = new HashMap<>();
     public HashMap<AE, ArrayList> F_ae = new HashMap<>();
     public HashMap<AE, ArrayList> uF_ae = new HashMap<>();
+    public double M;
 
 
     public void savePrmt(Path fpath) {
@@ -174,6 +171,7 @@ public class Parameter implements Serializable {
                      _prmt.uF_ae.put(_ae, ae_uF);
                 }
             }
+            _prmt.M = _prmt.N.size() * (Collections.max(_prmt.t_ij.values()) + Collections.max(_prmt.ga_i.values()));
         } catch (Exception ex) {
             ex.printStackTrace();
         }

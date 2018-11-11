@@ -34,7 +34,7 @@ public class ModelBuilder {
                         for (String j: aeN) {
                             x_aeij.put(new AEIJ(a, e, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", a, e, i, j)));
                         }
-                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("at(%d,%d,%s)", a, e, i)));
+                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%d,%d,%s)", a, e, i)));
                     }
                 }
             }
@@ -239,11 +239,10 @@ public class ModelBuilder {
         AE ae = new AE(a, e);
         ArrayList<String> aeS = prmt.S_ae.get(ae);
         ArrayList<String> aeN = prmt.N_ae.get(ae);
-        double M = prmt.N.size() * Collections.max(prmt.t_ij.values());
         // Arrival time calculation
         try {
             // Time Window
-            for (String i: prmt.N) {
+            for (String i: aeN) {
                 aei = new AEI(a, e, i);
                 mu = mu_aei.get(aei);
                 cplex.addLe(prmt.al_i.get(i), mu, String.format("TW_L(%d,%d,%s)", a, e, i));
@@ -272,10 +271,10 @@ public class ModelBuilder {
                     aeij = new AEIJ(a, e, i, j);
                     cnst = cplex.linearNumExpr();
                     cnst.addTerm(1, mu_aei.get(new AEI(a, e, i)));
-                    cnst.addTerm(M, x_aeij.get(aeij));
+                    cnst.addTerm(prmt.M, x_aeij.get(aeij));
                     cnst.addTerm(-1, mu_aei.get(new AEI(a, e, j)));
                     cplex.addLe(cnst,
-                            M - prmt.ga_i.get(i) - prmt.t_ij.get(ij),
+                            prmt.M - prmt.ga_i.get(i) - prmt.t_ij.get(ij),
                             String.format("AT(%d,%d,%s,%s)", a, e, i, j));
                 }
             }

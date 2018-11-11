@@ -18,7 +18,7 @@ public class Tester {
         Path dpath = Paths.get("_temp");
 
 
-        String prefix = "ED_Ex0";
+        String prefix = "g0-na005-nt040-sn00";
 //        String prefix = "g0-na010-nt015-sn00";
 //        String appName = "ILP";
 //        String appName = "SDA";

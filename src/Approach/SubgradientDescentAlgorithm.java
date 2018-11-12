@@ -113,7 +113,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         solve_TAA();
         solve_Routing();
         dualObjV1 = ObjV_TAA + objV_Routing;
-        logging("solveDuals", String.format("DualObjV1: %.4f  DualObjV1: %.4f", dualObjV0, dualObjV1));
+        logging("solveDuals", String.format("DualObjV0: %.4f  DualObjV1: %.4f", dualObjV0, dualObjV1));
     }
 
     private void solve_TAA() {

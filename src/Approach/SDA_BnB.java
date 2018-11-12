@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SDA_BnB extends SubgradientDescentAlgorithm{
-    private boolean USE_THREAD = false;
+    private boolean USE_THREAD = true;
     public SDA_BnB(Parameter _prmt, Etc _etc) {
         super(_prmt, _etc);
     }

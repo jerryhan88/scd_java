@@ -118,9 +118,9 @@ public class ILP extends ApproachSupClass {
                 for (AEI key: mu_aei.keySet()) {
                     sol.mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
                 }
-                sol.saveSolJSN(etc.solPathJSN);
                 sol.saveSolCSV(etc.solPathCSV);
                 sol.saveSolTXT(etc.solPathTXT);
+//                sol.saveSolJSN(etc.solPathJSN);
 //                sol.saveSolSER(etc.solPathSER);
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());

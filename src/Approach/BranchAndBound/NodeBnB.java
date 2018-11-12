@@ -8,16 +8,20 @@ import java.util.HashSet;
 
 class NodeBnB {
     private TreeBnB tree;
+    private NodeBnB pn;  // Parent node
     //
     private HashSet<String> Hn;  // Visited warehouses
     private ArrayList<Integer> KnP;  // Set of included tasks
     private ArrayList<Integer> KnM;  // Set of candidate tasks
     ArrayList<String> Sn;  // Partial sequence
-    private int seqIndex4Search;
+    private int seqIndex4Search, n_tk;
     double currentVolume, currentWeight;
     //
     double lowerBound = -Double.MAX_VALUE;
-    double upperBound = Double.MAX_VALUE;
+    double upperBound;
+    double tLB;  // temporal lower bound = g()
+    //
+    private HashMap<Integer, ArrayList> KnM_Sn;
     //
     NodeBnB(TreeBnB _tree,
             ArrayList<Integer> _KnM,
@@ -31,31 +35,36 @@ class NodeBnB {
         currentWeight = 0.0;
         //
         Hn = new HashSet<>();
+        set_KnM_bestSeqence();
+        upperBound = g() + h();
+        tLB = g();
     }
 
-    private NodeBnB(NodeBnB pn,
-                    ArrayList<Integer> _KnP,
-                    ArrayList<Integer> _KnM,
-                    ArrayList<String> _Sn, int _seqIndex4Search) {
-        tree = pn.tree;
-        //
-        KnP = _KnP;
-        KnM = _KnM;
+    private NodeBnB(NodeBnB _pn, int _n_tk, ArrayList<String> _Sn) {
+        tree = _pn.tree;
+        n_tk = _n_tk;
+        pn = _pn;
         Sn = _Sn;
-        seqIndex4Search = _seqIndex4Search;
+        seqIndex4Search = Sn.indexOf(tree.prmt.n_k.get(_n_tk)) + 1;
+        //
+        KnP = new ArrayList<>(pn.KnP);
+        KnP.add(n_tk);
+        //
         currentVolume = 0.0;
         currentWeight = 0.0;
-        //
         Hn = new HashSet<>();
         for (int tid: KnP) {
             Hn.add(tree.prmt.h_k.get(tid));
             currentVolume += tree.prmt.v_k.get(tid);
             currentWeight += tree.prmt.w_k.get(tid);
         }
+        set_KnM_bestSeqence();
+        upperBound = g() + h();
+        tLB = g();
     }
 
     public String toString() {
-        return String.join(",", Sn);
+        return String.format("tLB %.4f  UB %.4f  %s", tLB, upperBound, String.join(",", Sn));
     }
 
     double g() {  // return the sum of the lambda values of KnP
@@ -72,46 +81,38 @@ class NodeBnB {
         return v;
     }
 
-    ArrayList<NodeBnB> gen_children_and_calc_bounds() {
-        if (KnM.size() == 0) {
-            lowerBound = g();
-            return null;
+    private void set_KnM_bestSeqence() {
+        ArrayList<Integer> _KnM;
+        if (pn == null){
+            _KnM = new ArrayList<>(KnM);
         } else {
-            ArrayList<NodeBnB> children = new ArrayList<>();
-            for (int tid: KnM) {
-                if (tree.a_v < currentVolume + tree.prmt.v_k.get(tid))
+            _KnM = new ArrayList<>(pn.KnM);
+            _KnM.remove((Integer) n_tk);
+        }
+        KnM_Sn = new HashMap<>();
+        for (int tid: _KnM) {
+            if (tree.a_v < currentVolume + tree.prmt.v_k.get(tid))
+                continue;
+            else if (tree.a_w < currentWeight + tree.prmt.w_k.get(tid))
+                continue;
+            else {
+                ArrayList<String> best_sequence = get_best_sequence(tid);
+                if (best_sequence == null || get_travelTime(best_sequence) - tree.ae_l > tree.ae_u) {
                     continue;
-                if (tree.a_w < currentWeight + tree.prmt.w_k.get(tid))
-                    continue;
-                ArrayList<String> best_sequence = get_best_sequence(tid, seqIndex4Search);
-                if (best_sequence == null)
-                    continue;
-                if (get_travelTime(best_sequence) - tree.ae_l <= tree.ae_u) {
-                    ArrayList<Integer> KnP1 = new ArrayList<>(KnP);
-                    KnP1.add(tid);
-                    ArrayList<Integer> KnM1 = new ArrayList<>(KnM);
-                    KnM1.remove((Integer) tid);
-                    int seqIndex4Search1 = best_sequence.indexOf(tree.prmt.n_k.get(tid)) + 1;
-                    children.add(new NodeBnB(this, KnP1, KnM1,
-                                             best_sequence, seqIndex4Search1));
+                } else {
+                    KnM_Sn.put(tid, best_sequence);
                 }
             }
-            if (children.size() != 0) {
-                upperBound = g() + h();
-                return children;
-            } else {
-                lowerBound = g();
-                return null;
-            }
         }
+        KnM = new ArrayList<>(KnM_Sn.keySet());
     }
 
-    private ArrayList<String> get_best_sequence(int tid, int firstIndex) {
+    private ArrayList<String> get_best_sequence(int tid) {
         double min_tt = Double.MAX_VALUE;
         ArrayList<String> best_sequence = null;
         if (Hn.contains(tree.prmt.h_k.get(tid))) {
             // Insert the delivery node only
-            for (int s1 = firstIndex; s1 < Sn.size(); s1++) {
+            for (int s1 = seqIndex4Search; s1 < Sn.size(); s1++) {
                 ArrayList<String> sequence1 = new ArrayList<>(Sn);
                 sequence1.add(s1, tree.prmt.n_k.get(tid));
                 if (check_TW_violation(sequence1))
@@ -124,7 +125,7 @@ class NodeBnB {
             }
         } else {
             // Insert both the warehouse and delivery nodes
-            for (int s0 = firstIndex; s0 < Sn.size(); s0++) {
+            for (int s0 = seqIndex4Search; s0 < Sn.size(); s0++) {
                 for (int s1 = s0; s1 < Sn.size(); s1++) {
                     ArrayList<String> sequence1 = new ArrayList<>(Sn);
                     sequence1.add(s0, tree.prmt.h_k.get(tid));
@@ -190,5 +191,23 @@ class NodeBnB {
         }
         //
         return arrivalTime;
+    }
+
+    ArrayList<NodeBnB> gen_children_or_calc_lowerBound() {
+        if (KnM.size() == 0) {
+            lowerBound = g();
+            return null;
+        } else {
+            ArrayList<NodeBnB> children = new ArrayList<>();
+            for (int tid: KnM_Sn.keySet()) {
+                children.add(new NodeBnB(this, tid, KnM_Sn.get(tid)));
+            }
+            if (children.size() != 0) {
+                return children;
+            } else {
+                lowerBound = g();
+                return null;
+            }
+        }
     }
 }

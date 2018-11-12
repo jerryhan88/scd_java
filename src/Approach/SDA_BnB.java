@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SDA_BnB extends SubgradientDescentAlgorithm{
-    private boolean USE_THREAD = true;
+    private boolean USE_THREAD = false;
     public SDA_BnB(Parameter _prmt, Etc _etc) {
         super(_prmt, _etc);
     }
@@ -51,8 +51,7 @@ public class SDA_BnB extends SubgradientDescentAlgorithm{
                     e.printStackTrace();
                 }
             }
-            logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-            "solveDuals", "solve_Routing"});
+            logging("solveDuals", "solve_Routing");
         } else {
             ArrayList<Integer> aE;
             for (int a : prmt.A) {
@@ -67,8 +66,7 @@ public class SDA_BnB extends SubgradientDescentAlgorithm{
                     for (AEI key: treeBnB.mu_aei.keySet()) {
                         _mu_aei.put(key, treeBnB.mu_aei.get(key));
                     }
-                    logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                            "solveDuals", String.format("solve_Routing (%d&%d)", a, e)});
+                    logging("solveDuals", String.format("solve_Routing (%d&%d)", a, e));
                 }
             }
         }

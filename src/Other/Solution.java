@@ -61,7 +61,6 @@ public class Solution implements Serializable {
             FileWriter file = new FileWriter(fpath.toFile());
             file.write(base.toJSONString());
             file.flush();
-
         } catch (IOException e) {
             e.printStackTrace();
         }

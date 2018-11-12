@@ -6,9 +6,7 @@ import Index.AEI;
 import Index.AEK;
 import Other.Parameter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Stack;
+import java.util.*;
 
 public class TreeBnB implements Runnable{
     Parameter prmt;
@@ -20,8 +18,8 @@ public class TreeBnB implements Runnable{
     public HashMap<AEIJ, Double> x_aeij;
     public HashMap<AEI, Double> mu_aei;
     //
-    private Stack<NodeBnB> stackOfNodes;
-    private NodeBnB incumbent = null;
+    PriorityQueue<NodeBnB> pq;
+    NodeBnB incumbent = null;
 
     public TreeBnB(Parameter _prmt, int _a, int _e, HashMap<AEK, Double> _lm_aek) {
         AE ae = new AE(_a, _e);
@@ -33,40 +31,70 @@ public class TreeBnB implements Runnable{
         ae_l = prmt.l_ae.get(ae);
         ae_u = prmt.u_ae.get(ae);
         lm_k = new HashMap<>();
-        ArrayList<Integer> KnM = new ArrayList<>(prmt.F_ae.get(ae));
-        ArrayList<String> Sn = new ArrayList<>(prmt.S_ae.get(ae));
-        for (int k: KnM) {
-            lm_k.put(k, _lm_aek.get(new AEK(a, e, k)));
+        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
+        ArrayList<Integer> KnM = new ArrayList<>();
+        for (int k: aeF) {
+            if (_lm_aek.get(new AEK(a, e, k)) > 0) {
+                KnM.add(k);
+                lm_k.put(k, _lm_aek.get(new AEK(a, e, k)));
+            }
         }
-        KnM.sort((Integer o1, Integer o2) -> Double.compare(lm_k.get(o1), lm_k.get(o2)));
+        ArrayList<String> Sn = new ArrayList<>(prmt.S_ae.get(ae));
+        KnM.sort(Comparator.comparingDouble((Integer o) -> lm_k.get(o)));
         //
-        stackOfNodes = new Stack<>();
-        stackOfNodes.push(new NodeBnB(this, KnM, Sn));
+        pq = new PriorityQueue<>(new Comparator<NodeBnB>() {
+            @Override
+            public int compare(NodeBnB o1, NodeBnB o2) {
+                if (o1.tLB < o2.tLB)
+                    return 1;
+                else if (o1.tLB > o2.tLB)
+                    return -1;
+                else {
+                    if (o1.upperBound < o2.upperBound)
+                        return 1;
+                    else if (o1.upperBound > o2.upperBound)
+                        return -1;
+                    else
+                        return 0;
+                }
+            }
+        });
+        pq.add(new NodeBnB(this, KnM, Sn));
+    }
+
+    void update_incumbent(NodeBnB tn) {
+        assert tn.lowerBound != -Double.MAX_VALUE;
+        if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
+            incumbent = tn;
+        }
+
     }
 
     private void branch() {
-        NodeBnB tn = stackOfNodes.pop();
-        ArrayList<NodeBnB> children = tn.gen_children_and_calc_bounds();
-        if (children == null) {
-            assert tn.lowerBound != -Double.MAX_VALUE;
-            if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
-                incumbent = tn;
-            }
-        } else if (incumbent == null){
-            for (NodeBnB cn: children) {
-                stackOfNodes.push(cn);
-            }
-        } else if (incumbent.lowerBound < tn.upperBound) {
-            for (NodeBnB cn: children) {
-                stackOfNodes.push(cn);
+        NodeBnB tn = pq.poll();
+        if (incumbent != null && tn.upperBound <= incumbent.lowerBound)
+            return;
+        if (tn.tLB == tn.upperBound) {
+            tn.lowerBound = tn.g();
+            update_incumbent(tn);
+        } else {
+            ArrayList<NodeBnB> children = tn.gen_children_or_calc_lowerBound();
+            if (children == null) {
+                update_incumbent(tn);
+            } else {
+                pq.addAll(children);
             }
         }
     }
 
     public void solve() {
-        while (!stackOfNodes.empty())
+        while (pq.size() != 0) {
             branch();
-        //
+        }
+        update_dvs();
+    }
+
+    void update_dvs() {
         x_aeij = new HashMap<>();
         mu_aei = new HashMap<>();
         ArrayList<String> aeN = prmt.N_ae.get(new AE(a, e));

@@ -7,7 +7,8 @@ import java.util.Date;
 
 
 public class Etc {
-    public Date startDate;
+    private Date startDate;
+    private double startCpuTime;
     public Path logPath = null;
     public Path solPathJSN = null;
     public Path solPathSER = null;
@@ -21,6 +22,7 @@ public class Etc {
 
     public Etc(Path _solPathJSON, Path _solPathSER, Path _solPathCSV, Path _solPathTXT) {
         startDate = new Date();
+        startCpuTime = getCPU_TS();
         solPathJSN = _solPathJSON;
         solPathSER = _solPathSER;
         solPathCSV = _solPathCSV;
@@ -31,13 +33,17 @@ public class Etc {
         logPath = _logPath;
     }
 
+    private double getCPU_TS() {
+        OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        return operatingSystemMXBean.getProcessCpuTime() / 1000000000.;
+    }
+
     public double getWallTime() {
         Date endDate = new Date();
         return (endDate.getTime()-startDate.getTime()) / 1000.;
     }
 
     public double getCpuTime() {
-        OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        return operatingSystemMXBean.getProcessCpuTime() / 1000000000.;
+        return getCPU_TS() - startCpuTime;
     }
 }

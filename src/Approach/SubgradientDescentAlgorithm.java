@@ -19,13 +19,14 @@ import java.util.HashMap;
 
 
 public class SubgradientDescentAlgorithm extends ApproachSupClass {
-    static int NUM_ITERS_LIMIT = 20;
+    static int NUM_ITERS_LIMIT = 50;
     static double DUAL_GAP_LIMIT_PERCENT = 0.05;
+    static int NO_IMPROVEMENT_ITERATION_LIMIT = 3;
     //
     Parameter prmt;
     Etc etc;
     IloCplex cplex;
-    int numIters, noImpvLimits, noUpdateCounter;
+    int numIters, noUpdateCounter;
     double at, ut, dualObjV0, F_star;
     double dualObjV1, ObjV_TAA, objV_Routing;
     Solution bestSol;
@@ -35,7 +36,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     public HashMap<AEIJ, Double> _x_aeij = new HashMap<>();
     HashMap<AEI, Double> _mu_aei = new HashMap<>();
 
-
     public SubgradientDescentAlgorithm(Parameter _prmt, Etc _etc) {
         prmt = _prmt;
         etc = _etc;
@@ -44,7 +44,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         dualObjV0 = Double.MAX_VALUE;
         F_star = -Double.MAX_VALUE;
         numIters = 0;
-        noImpvLimits = 5;
         noUpdateCounter = 0;
         ArrayList<Integer> aE;
         for (int a : prmt.A) {
@@ -57,12 +56,16 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         }
     }
 
-    public void logging(String[] row) {
+    public void logging(String category, String note) {
+        String[] row = {String.format("%f", etc.getWallTime()),
+                        String.format("%f", etc.getCpuTime()),
+                        String.format("%d", numIters),
+                        category, note};
         try {
             CSVPrinter csvPrinter;
-            if (numIters == 0 && row[3].equals("Initialization")) {
+            if (numIters == 0 && note.equals("Initialization")) {
                 csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString()), CSVFormat.DEFAULT
-                        .withHeader("cpuT", "Iteration", "Category", "Note"));
+                        .withHeader("wallT", "cpuT", "Iteration", "Category", "Note"));
             } else {
                 csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString(), true), CSVFormat.DEFAULT);
             }
@@ -75,20 +78,31 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
 
     @Override
     public void run() {
-        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                              "-", "Initialization"});
+        logging("-", "Initialization");
+        double dualG;
+//        while (true) {
+//            solveDuals();
+//            primalExtraction();
+//            UpdateLM();
+//            dualG = (dualObjV0 - F_star) / F_star;
+//            if (dualG <= DUAL_GAP_LIMIT_PERCENT) break;
+//            numIters += 1;
+//            System.out.println(String.format("#%d: dualG %.3f  cpuT %.3f  wallT %.3f",
+//                    numIters, dualG, etc.getCpuTime(), etc.getWallTime()));
+//        }
         while (numIters < NUM_ITERS_LIMIT) {
             solveDuals();
             primalExtraction();
             UpdateLM();
-            if ((dualObjV0 - F_star) / F_star <= DUAL_GAP_LIMIT_PERCENT) break;
+            dualG = (dualObjV0 - F_star) / F_star;
+            if (dualG <= DUAL_GAP_LIMIT_PERCENT) break;
             numIters += 1;
             System.out.println(numIters + ": " + etc.getCpuTime() + "  " +etc.getWallTime());
         }
         //
-        bestSol.saveSolJSN(etc.solPathJSN);
         bestSol.saveSolCSV(etc.solPathCSV);
         bestSol.saveSolTXT(etc.solPathTXT);
+//        bestSol.saveSolJSN(etc.solPathJSN);
 //        bestSol.saveSolSER(etc.solPathSER);
     }
     private void solveDuals() {
@@ -99,8 +113,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         solve_TAA();
         solve_Routing();
         dualObjV1 = ObjV_TAA + objV_Routing;
-        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                "solveDuals", String.format("DualObjV: %f", dualObjV1)});
+        logging("solveDuals", String.format("DualObjV1: %.4f  DualObjV1: %.4f", dualObjV0, dualObjV1));
     }
 
     private void solve_TAA() {
@@ -179,8 +192,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
-            logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                    "solveDuals", "solve_TAA"});
+            logging("solveDuals", "solve_TAA");
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -245,8 +257,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                         cplex.output().println("Other.Solution status = " + cplex.getStatus());
                     }
                     cplex.end();
-                    logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                            "solveDuals", String.format("solve_Routing (%d&%d)", a, e)});
+                    logging("solveDuals", String.format("solve_Routing (%d&%d)", a, e));
                 }
             }
         } catch (Exception ex) {
@@ -352,8 +363,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
-            logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                    "primalExtraction", String.format("F*: %f", F_star)});
+            logging("primalExtraction", String.format("F*: %f", F_star));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -378,7 +388,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         } else {
             // No improvement
             noUpdateCounter += 1;
-            if (noUpdateCounter == noImpvLimits) {
+            if (noUpdateCounter == NO_IMPROVEMENT_ITERATION_LIMIT) {
                 ut *= 0.5;
                 noUpdateCounter = 0;
             }
@@ -430,11 +440,9 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                     } else {
                         _lm_aek.put(aek, lm);
                     }
-                    _lm_aek.put(aek, lm);
                 }
             }
         }
-        logging(new String[] {String.format("%f", etc.getCpuTime()), String.format("%d", numIters),
-                "UpdateLM", String.format("a_t: %f", at)});
+        logging("UpdateLM", String.format("a_t: %f", at));
     }
 }

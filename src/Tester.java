@@ -1,7 +1,4 @@
-import Approach.ApproachSupClass;
-import Approach.ILP;
-import Approach.SDA_BnB;
-import Approach.SubgradientDescentAlgorithm;
+import Approach.*;
 import Other.Etc;
 import Other.Parameter;
 import org.apache.commons.io.FilenameUtils;
@@ -18,11 +15,11 @@ public class Tester {
         Path dpath = Paths.get("_temp");
 
 
-        String prefix = "g0-na005-nt040-sn00";
-//        String prefix = "g0-na010-nt015-sn00";
+        String prefix = "na010-nt100-vc10-wc10-sn00";
 //        String appName = "ILP";
 //        String appName = "SDA";
         String appName = "SDAbnb";
+//        String appName = "SDAgh";
 
         Path prmt_fpath = dpath.resolve(String.format("prmt_%s.ser", prefix));
         Parameter prmt;
@@ -51,6 +48,10 @@ public class Tester {
         } else if (appName.equals("SDAbnb")) {
             etc.setLogPath(dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
             SubgradientDescentAlgorithm sda_bnb = new SDA_BnB(prmt, etc);
+            sda_bnb.run();
+        } else if (appName.equals("SDAgh")) {
+            etc.setLogPath(dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
+            SubgradientDescentAlgorithm sda_bnb = new SDA_GH(prmt, etc);
             sda_bnb.run();
         }
 
@@ -103,6 +104,9 @@ public class Tester {
                 } else if (appName.equals("SDAbnb")) {
                     etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
                     app = new SDA_BnB(prmt, etc);
+                } else if (appName.equals("SDAgh")) {
+                    etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, appName)));
+                    app = new SDA_GH(prmt, etc);
                 } else {
                     throw new RuntimeException("Type proper an approach name, ILP or SDA");
                 }

@@ -67,7 +67,6 @@ public class TreeBnB implements Runnable{
         if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
             incumbent = tn;
         }
-
     }
 
     private void branch() {

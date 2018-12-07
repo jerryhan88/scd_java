@@ -19,10 +19,6 @@ import java.util.HashMap;
 
 
 public class SubgradientDescentAlgorithm extends ApproachSupClass {
-    static int NUM_ITERS_LIMIT = 50;
-    static double DUAL_GAP_LIMIT_PERCENT = 0.05;
-    static int NO_IMPROVEMENT_ITERATION_LIMIT = 3;
-    //
     Parameter prmt;
     Etc etc;
     IloCplex cplex;
@@ -35,7 +31,13 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     HashMap<AEK, Double> _z_aek = new HashMap<>();
     public HashMap<AEIJ, Double> _x_aeij = new HashMap<>();
     HashMap<AEI, Double> _mu_aei = new HashMap<>();
+    //
+    int TERMINATION_NUM_ITERS, NO_IMPROVEMENT_LIMIT;
+    double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
 
+    double COMPENSATION_LIMIT = -1.0;
+    double COMPENSATION_RATE = -1.0;
+    boolean isCompensationMode = false;
     public SubgradientDescentAlgorithm(Parameter _prmt, Etc _etc) {
         prmt = _prmt;
         etc = _etc;
@@ -54,6 +56,26 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 }
             }
         }
+    }
+
+    public void set_parameters(int _TERMINATION_NUM_ITERS, double _TERMINATION_DUEL_GAP,
+                               int _NO_IMPROVEMENT_LIMIT, double _STEP_DECREASE_RATE) {
+        TERMINATION_NUM_ITERS = _TERMINATION_NUM_ITERS;
+        TERMINATION_DUEL_GAP = _TERMINATION_DUEL_GAP;
+        NO_IMPROVEMENT_LIMIT = _NO_IMPROVEMENT_LIMIT;
+        STEP_DECREASE_RATE = _STEP_DECREASE_RATE;
+    }
+
+    public void set_parameters(int _TERMINATION_NUM_ITERS, double _TERMINATION_DUEL_GAP,
+                               int _NO_IMPROVEMENT_LIMIT, double _STEP_DECREASE_RATE,
+                               double _COMPENSATION_LIMIT, double _COMPENSATION_RATE) {
+        TERMINATION_NUM_ITERS = _TERMINATION_NUM_ITERS;
+        TERMINATION_DUEL_GAP = _TERMINATION_DUEL_GAP;
+        NO_IMPROVEMENT_LIMIT = _NO_IMPROVEMENT_LIMIT;
+        STEP_DECREASE_RATE = _STEP_DECREASE_RATE;
+        COMPENSATION_LIMIT = _COMPENSATION_LIMIT;
+        COMPENSATION_RATE = _COMPENSATION_RATE;
+        isCompensationMode = true;
     }
 
     public void logging(String category, String note) {
@@ -80,24 +102,14 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     public void run() {
         logging("-", "Initialization");
         double dualG;
-//        while (true) {
-//            solveDuals();
-//            primalExtraction();
-//            UpdateLM();
-//            dualG = (dualObjV0 - F_star) / F_star;
-//            if (dualG <= DUAL_GAP_LIMIT_PERCENT) break;
-//            numIters += 1;
-//            System.out.println(String.format("#%d: dualG %.3f  cpuT %.3f  wallT %.3f",
-//                    numIters, dualG, etc.getCpuTime(), etc.getWallTime()));
-//        }
-        while (numIters < NUM_ITERS_LIMIT) {
+        while (numIters < TERMINATION_NUM_ITERS) {
             solveDuals();
             primalExtraction();
             UpdateLM();
             dualG = (dualObjV0 - F_star) / F_star;
-            if (dualG <= DUAL_GAP_LIMIT_PERCENT) break;
+            if (dualG <= TERMINATION_DUEL_GAP) break;
             numIters += 1;
-            System.out.println(numIters + ": " + etc.getCpuTime() + "  " +etc.getWallTime());
+            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f", numIters, dualG, etc.getCpuTime()));
         }
         //
         bestSol.saveSolCSV(etc.solPathCSV);
@@ -113,7 +125,12 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         solve_TAA();
         solve_Routing();
         dualObjV1 = ObjV_TAA + objV_Routing;
-        logging("solveDuals", String.format("DualObjV0: %.4f  DualObjV1: %.4f", dualObjV0, dualObjV1));
+        if (numIters == 0) {
+            logging("solveDuals", String.format("DualObjV0: inf  DualObjV1: %.4f", dualObjV1));
+        } else {
+            logging("solveDuals", String.format("DualObjV0: %.4f  DualObjV1: %.4f", dualObjV0, dualObjV1));
+        }
+
     }
 
     private void solve_TAA() {
@@ -369,6 +386,56 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         }
     }
 
+    private void update_step_size() {
+        double y, z;
+        ArrayList<Integer> aE;
+        ArrayList<String> aeN;
+        AK ak;
+        AE ae;
+        AEK aek;
+        AEIJ aeij;
+        //   dualObjV1: at new value
+        //   dualObjV0: the old one
+        if (isCompensationMode && numIters !=0 && COMPENSATION_LIMIT < (dualObjV0 - dualObjV1) / dualObjV0) {
+            at *= COMPENSATION_RATE;
+        } else {
+            if (dualObjV1 < dualObjV0) {
+                // Better solution
+                dualObjV0 = dualObjV1;
+            } else {
+                // No improvement
+                noUpdateCounter += 1;
+                if (noUpdateCounter == NO_IMPROVEMENT_LIMIT) {
+                    ut *= STEP_DECREASE_RATE;
+                    noUpdateCounter = 0;
+                }
+            }
+            // Update at (Scale for the movement)
+            double denominator = ut * (dualObjV0 - F_star);
+            double numerator2 = 0.0;
+            for (int k: prmt.K) {
+                for (int a: prmt.A) {
+                    ak = new AK(a, k);
+                    y = _y_ak.get(ak);
+                    aE = prmt.E_a.get(a);
+                    for (int e : aE) {
+                        ae = new AE(a, e);
+                        aek = new AEK(a, e, k);
+                        z = _z_aek.get(aek);
+                        aeN = prmt.N_ae.get(ae);
+                        double sumX = 0.0;
+                        for (String j: aeN) {
+                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                            sumX += _x_aeij.get(aeij);
+                        }
+                        numerator2 += Math.pow(sumX + z - y, 2);
+                    }
+                }
+            }
+            at = denominator / numerator2;
+        }
+    }
+
     private void UpdateLM() {
         double y, z;
         double lm;
@@ -378,46 +445,8 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
         AE ae;
         AEK aek;
         AEIJ aeij;
-
-        // Update ut (kind of temperature)
-        //   dualObjV1: at new value
-        //   dualObjV0: the old one
-        if (dualObjV1 < dualObjV0) {
-            // Better solution
-            dualObjV0 = dualObjV1;
-        } else {
-            // No improvement
-            noUpdateCounter += 1;
-            if (noUpdateCounter == NO_IMPROVEMENT_ITERATION_LIMIT) {
-                ut *= 0.5;
-                noUpdateCounter = 0;
-            }
-        }
-
-        // Update at (Scale for the movement)
-        double denominator = ut * (dualObjV0 - F_star);
-        double numerator2 = 0.0;
-        for (int k: prmt.K) {
-            for (int a: prmt.A) {
-                ak = new AK(a, k);
-                y = _y_ak.get(ak);
-                aE = prmt.E_a.get(a);
-                for (int e : aE) {
-                    ae = new AE(a, e);
-                    aek = new AEK(a, e, k);
-                    z = _z_aek.get(aek);
-                    aeN = prmt.N_ae.get(ae);
-                    double sumX = 0.0;
-                    for (String j: aeN) {
-                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                        sumX += _x_aeij.get(aeij);
-                    }
-                    numerator2 += Math.pow(sumX + z - y, 2);
-                }
-            }
-        }
-        at = denominator / Math.sqrt(numerator2);
-
+        // Update the step size, at, first
+        update_step_size();
         // Update multipliers
         for (int k: prmt.K) {
             for (int a: prmt.A) {
@@ -443,6 +472,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 }
             }
         }
-        logging("UpdateLM", String.format("a_t: %f", at));
+        logging("UpdateLM", String.format("at: %f  ut: %f", at, ut));
     }
 }

@@ -52,7 +52,6 @@ public class SDA_GH extends SubgradientDescentAlgorithm {
                     e.printStackTrace();
                 }
             }
-            logging("solveDuals", "solve_Routing");
         } else {
             ArrayList<Integer> aE;
             for (int a : prmt.A) {
@@ -67,7 +66,6 @@ public class SDA_GH extends SubgradientDescentAlgorithm {
                     for (AEI key: tree.mu_aei.keySet()) {
                         _mu_aei.put(key, tree.mu_aei.get(key));
                     }
-                    logging("solveDuals", String.format("solve_Routing (%d&%d)", a, e));
                 }
             }
         }

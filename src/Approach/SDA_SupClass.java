@@ -1,11 +1,9 @@
 package Approach;
 
 import Index.*;
-import Other.Parameter;
 import Other.Etc;
-
+import Other.Parameter;
 import Other.Solution;
-import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
@@ -18,12 +16,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 
-public class SubgradientDescentAlgorithm extends ApproachSupClass {
-    Parameter prmt;
-    Etc etc;
-
-
+public class SDA_SupClass extends ApproachSupClass {
     IloCplex cplex;
+    //
     private int numIters, noUpdateCounter;
     private double at, ut, dualObjV0, F_star, F1;
     private double dualObjV1;
@@ -46,7 +41,7 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
     private double INIT_LAMBDA_MULIPLYER = 2.0;
     private int NUM_LAMBDA = 0;
     //
-    public SubgradientDescentAlgorithm(Parameter prmt, Etc etc) {
+    public SDA_SupClass(Parameter prmt, Etc etc) {
         super(prmt, etc);
         at = 0.0;
         ut = 2.0;
@@ -143,7 +138,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             e.printStackTrace();
         }
     }
-
 
     @Override
     public void run() {
@@ -274,72 +268,6 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    public void solve_Routing() {
-        double lm;
-        ArrayList<Integer> aE;
-        ArrayList<String> aeN;
-        IloNumVar x;
-        IloLinearNumExpr obj;
-        AE ae;
-        AEK aek;
-        AEIJ aeij;
-        try {
-            for (int a : prmt.A) {
-                aE = prmt.E_a.get(a);
-                for (int e : aE) {
-                    ae = new AE(a, e);
-                    aeN = prmt.N_ae.get(ae);
-                    HashMap<AEIJ, IloNumVar> x_aeij = new HashMap<>();
-                    HashMap<AEI, IloNumVar> mu_aei = new HashMap<>();
-                    //
-                    cplex = new IloCplex();
-                    for (String i: aeN) {
-                        for (String j: aeN) {
-                            x_aeij.put(new AEIJ(a, e, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", a, e, i, j)));
-                        }
-                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%d,%d,%s)", a, e, i)));
-                    }
-                    //
-                    obj = cplex.linearNumExpr();
-                    for (int k : prmt.K) {
-                        aek = new AEK(a, e, k);
-                        lm = _lm_aek.get(aek);
-                        for (String j: aeN) {
-                            aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
-                            x = x_aeij.get(aeij);
-                            obj.addTerm(-lm, x);
-                        }
-                    }
-                    cplex.addMinimize(obj);
-                    //
-                    ModelBuilder.def_FC_cnsts_aeGiven(prmt, a, e, cplex, x_aeij);
-                    ModelBuilder.def_AT_cnsts_aeGiven(prmt, a, e, cplex, x_aeij, mu_aei);
-                    //
-                    cplex.setOut(null);
-                    cplex.solve();
-                    if (cplex.getStatus() == IloCplex.Status.Optimal) {
-                        try {
-                            objV_Routing += cplex.getObjValue();
-                            for (AEIJ key: x_aeij.keySet()) {
-                                _x_aeij.put(key, cplex.getValue(x_aeij.get(key)));
-                            }
-                            for (AEI key: mu_aei.keySet()) {
-                                _mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
-                            }
-                        } catch (IloException ex) {
-                            ex.printStackTrace();
-                        }
-                    } else {
-                        cplex.output().println("Other.Solution status = " + cplex.getStatus());
-                    }
-                    cplex.end();
-                }
-            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -542,5 +470,22 @@ public class SubgradientDescentAlgorithm extends ApproachSupClass {
             }
         }
         lmLogging(row);
+    }
+
+    public void solve_Routing() {
+        ArrayList<Integer> aE;
+        for (int a : prmt.A) {
+            aE = prmt.E_a.get(a);
+            for (int e : aE) {
+                AE ae = new AE(a, e);
+
+
+                treeBnB = new TreeBnB(prmt, a, e, _lm_aek);
+                t = new Thread(treeBnB, String.format("%d, %d", a, e));
+                trees.put(ae, treeBnB);
+                threads.put(ae, t);
+                t.start();
+            }
+        }
     }
 }

@@ -13,8 +13,6 @@ import Other.Parameter;
 import Other.Solution;
 
 public class ILP extends ApproachSupClass {
-    Parameter prmt;
-    Etc etc;
     IloCplex cplex;
     //
     HashMap<AK, IloNumVar> y_ae;
@@ -22,9 +20,8 @@ public class ILP extends ApproachSupClass {
     HashMap<AEIJ, IloNumVar> x_aeij;
     HashMap<AEI, IloNumVar> mu_aei;
 
-    public ILP(Parameter _prmt, Etc _etc) {
-        prmt = _prmt;
-        etc = _etc;
+    public ILP(Parameter prmt, Etc etc) {
+        super(prmt, etc);
         //
         y_ae = new HashMap<>();
         z_aek = new HashMap<>();

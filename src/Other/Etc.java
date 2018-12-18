@@ -10,6 +10,7 @@ public class Etc {
     private Date startDate;
     private double startCpuTime;
     public Path logPath = null;
+    public Path lmLogPath = null;
     public Path solPathJSN = null;
     public Path solPathSER = null;
     public Path solPathCSV = null;
@@ -31,6 +32,10 @@ public class Etc {
 
     public void setLogPath(Path _logPath) {
         logPath = _logPath;
+    }
+
+    public void setLmLogPath(Path _logPath) {
+        lmLogPath = _logPath;
     }
 
     private double getCPU_TS() {

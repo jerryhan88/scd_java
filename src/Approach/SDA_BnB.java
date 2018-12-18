@@ -28,11 +28,11 @@ public class SDA_BnB extends SubgradientDescentAlgorithm{
             for (int a : prmt.A) {
                 aE = prmt.E_a.get(a);
                 for (int e : aE) {
-                AE kr = new AE(a, e);
+                AE ae = new AE(a, e);
                 treeBnB = new TreeBnB(prmt, a, e, _lm_aek);
                 t = new Thread(treeBnB, String.format("%d, %d", a, e));
-                trees.put(kr, treeBnB);
-                threads.put(kr, t);
+                trees.put(ae, treeBnB);
+                threads.put(ae, t);
                 t.start();
                 }
             }
@@ -51,7 +51,6 @@ public class SDA_BnB extends SubgradientDescentAlgorithm{
                     e.printStackTrace();
                 }
             }
-            logging("solveDuals", "solve_Routing");
         } else {
             ArrayList<Integer> aE;
             for (int a : prmt.A) {
@@ -66,7 +65,6 @@ public class SDA_BnB extends SubgradientDescentAlgorithm{
                     for (AEI key: treeBnB.mu_aei.keySet()) {
                         _mu_aei.put(key, treeBnB.mu_aei.get(key));
                     }
-                    logging("solveDuals", String.format("solve_Routing (%d&%d)", a, e));
                 }
             }
         }

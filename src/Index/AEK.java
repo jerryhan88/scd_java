@@ -2,11 +2,11 @@ package Index;
 
 public class AEK extends IndexSupCls {
     int a, e, k;
-    public AEK(int _a, int _e, int _k) {
-        a = _a;
-        e = _e;
-        k = _k;
-        notation = String.format("[%d,%d,%d]", a, e, k);
+    public AEK(int a, int e, int k) {
+        this.a = a;
+        this.e = e;
+        this.k = k;
+        notation = String.format("[%d,%d,%d]", this.a, this.e, this.k);
     }
 
     public String get_label() {

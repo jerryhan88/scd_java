@@ -1,5 +1,7 @@
 package Approach;
 
+import Approach.Router.RouterILP;
+import Approach.Router.RouterSup;
 import Index.*;
 import Other.Etc;
 import Other.Parameter;
@@ -14,9 +16,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ForkJoinPool;
 
 
-public class SDA_SupClass extends ApproachSupClass {
+public class SGM extends ApproachSupClass {
+    RouterSup router;
+    //
     IloCplex cplex;
     //
     private int numIters, noUpdateCounter;
@@ -41,7 +46,7 @@ public class SDA_SupClass extends ApproachSupClass {
     private double INIT_LAMBDA_MULIPLYER = 2.0;
     private int NUM_LAMBDA = 0;
     //
-    public SDA_SupClass(Parameter prmt, Etc etc) {
+    public SGM(Parameter prmt, Etc etc) {
         super(prmt, etc);
         at = 0.0;
         ut = 2.0;
@@ -58,6 +63,12 @@ public class SDA_SupClass extends ApproachSupClass {
                     NUM_LAMBDA += 1;
                 }
             }
+        }
+    }
+
+    public void set_router(String router) {
+        if (router.equals("ILP")) {
+            this.router = new RouterILP();
         }
     }
 
@@ -473,19 +484,8 @@ public class SDA_SupClass extends ApproachSupClass {
     }
 
     public void solve_Routing() {
-        ArrayList<Integer> aE;
-        for (int a : prmt.A) {
-            aE = prmt.E_a.get(a);
-            for (int e : aE) {
-                AE ae = new AE(a, e);
-
-
-                treeBnB = new TreeBnB(prmt, a, e, _lm_aek);
-                t = new Thread(treeBnB, String.format("%d, %d", a, e));
-                trees.put(ae, treeBnB);
-                threads.put(ae, t);
-                t.start();
-            }
-        }
+        ForkJoinPool pool = ForkJoinPool.commonPool();
+        Routing_PL_worker routingPLhandler = new Routing_PL_worker(this);
+        objV_Routing = pool.invoke(routingPLhandler);
     }
 }

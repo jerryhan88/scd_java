@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 
-public class Tester {
+public class Main {
     public static void main(String[] args) {
         String appName = null;
         Path prmt_dpath = null;
@@ -85,20 +85,15 @@ public class Tester {
                         sol_dpath.resolve(String.format("sol_%s_%s.txt", prefix, modiAppName)));
                 etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, modiAppName)));
                 etc.setLmLogPath(sol_dpath.resolve(String.format("LmLog_%s_%s.csv", prefix, modiAppName)));
-                if (appName.equals("SDA")) {
-                    app = new SubgradientDescentAlgorithm(prmt, etc);
-                } else if (appName.equals("SDAbnb")) {
-                    app = new SDA_BnB(prmt, etc);
-                } else if (appName.equals("SDAgh")) {
-                    app = new SDA_GH(prmt, etc);
-                } else {
-                    throw new RuntimeException("Type proper an approach name, ILP or SDAs");
-                }
+                //
+                app = new SGM(prmt, etc);
+                String router = appName.split("n")[1];
+                ((SGM) app).set_router(router);
                 if (compensationMode == 0) {
-                    ((SubgradientDescentAlgorithm) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
+                    ((SGM) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
                             NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE);
                 } else {
-                    ((SubgradientDescentAlgorithm) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
+                    ((SGM) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
                             NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE,
                             COMPENSATION_LIMIT, COMPENSATION_RATE);
                 }

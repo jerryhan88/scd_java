@@ -21,13 +21,13 @@ public class Etc {
         startDate = new Date();
     }
 
-    public Etc(Path _solPathJSON, Path _solPathSER, Path _solPathCSV, Path _solPathTXT) {
+    public Etc(Path solPathJSN, Path solPathSER, Path solPathCSV, Path solPathTXT) {
         startDate = new Date();
         startCpuTime = getCPU_TS();
-        solPathJSN = _solPathJSON;
-        solPathSER = _solPathSER;
-        solPathCSV = _solPathCSV;
-        solPathTXT = _solPathTXT;
+        this.solPathJSN = solPathJSN;
+        this.solPathSER = solPathSER;
+        this.solPathCSV = solPathCSV;
+        this.solPathTXT = solPathTXT;
     }
 
     public void setLogPath(Path _logPath) {

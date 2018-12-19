@@ -118,9 +118,9 @@ public class ModelBuilder {
         }
     }
 
-    static void def_FC_cnsts_aeGiven(Parameter prmt, int a, int e,
-                                     IloCplex cplex,
-                                     HashMap<AEIJ, IloNumVar> x_aeij) {
+    public static void def_FC_cnsts_aeGiven(Parameter prmt, int a, int e,
+                                            IloCplex cplex,
+                                            HashMap<AEIJ, IloNumVar> x_aeij) {
         IloNumVar x;
         IloLinearNumExpr cnst;
         AEIJ aeij;
@@ -226,10 +226,10 @@ public class ModelBuilder {
         }
     }
 
-    static void def_AT_cnsts_aeGiven(Parameter prmt, int a, int e,
-                                     IloCplex cplex,
-                                     HashMap<AEIJ, IloNumVar> x_aeij,
-                                     HashMap<AEI, IloNumVar> mu_aei) {
+    public static void def_AT_cnsts_aeGiven(Parameter prmt, int a, int e,
+                                            IloCplex cplex,
+                                            HashMap<AEIJ, IloNumVar> x_aeij,
+                                            HashMap<AEI, IloNumVar> mu_aei) {
         IloNumVar x, mu;
         IloLinearNumExpr cnst;
         IJ ij;

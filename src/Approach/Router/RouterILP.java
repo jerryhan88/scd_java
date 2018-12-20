@@ -7,17 +7,21 @@ import Index.AEIJ;
 import Index.AEK;
 import Other.Parameter;
 import Other.RoutingProbSol;
-import ilog.concert.IloException;
+import java.util.ArrayList;
+import java.util.HashMap;
+//
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class RouterILP extends RouterSup {
 
-    public double solve(RoutingProbSol rProbSol) {
+    public void solve(RoutingProbSol rProbSol) {
         int a = rProbSol.get_aid();
         int e = rProbSol.get_eid();
         Parameter prmt = rProbSol.get_prmt();
@@ -25,6 +29,7 @@ public class RouterILP extends RouterSup {
         //
         AE ae = new AE(a, e);
         ArrayList<String> aeN = prmt.N_ae.get(ae);
+        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
         try {
             double lm;
             AEK aek;
@@ -42,7 +47,7 @@ public class RouterILP extends RouterSup {
             }
             //
             IloLinearNumExpr obj = cplex.linearNumExpr();
-            for (int k : prmt.K) {
+            for (int k : aeF) {
                 aek = new AEK(a, e, k);
                 lm = lm_aek.get(aek);
                 for (String j: aeN) {
@@ -57,24 +62,22 @@ public class RouterILP extends RouterSup {
             ModelBuilder.def_AT_cnsts_aeGiven(prmt, a, e, cplex, x_aeij, mu_aei);
             //
             cplex.setOut(null);
+
+            // TODO
+            // remove?
+//            String timeStamp = new SimpleDateFormat("HHmmss").format(new Date());
+//            cplex.setOut(new FileOutputStream(String.format("%s-%d_%d.log",
+//                    timeStamp, rProbSol.get_aid(), rProbSol.get_eid())));
+
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
-                // TODO
-                // Update this part!!  save solution in routingProbSol
-
-//                try {
-//                    objV_Routing += cplex.getObjValue();
-//                    for (AEIJ key: x_aeij.keySet()) {
-//                        _x_aeij.put(key, cplex.getValue(x_aeij.get(key)));
-//                    }
-//                    for (AEI key: mu_aei.keySet()) {
-//                        _mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
-//                    }
-//                } catch (IloException ex) {
-//                    ex.printStackTrace();
-//                }
-
-
+                rProbSol.objV = cplex.getObjValue();
+                for (AEIJ key: x_aeij.keySet()) {
+                    rProbSol.x_aeij.put(key, cplex.getValue(x_aeij.get(key)));
+                }
+                for (AEI key: mu_aei.keySet()) {
+                    rProbSol.mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
+                }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
@@ -82,7 +85,5 @@ public class RouterILP extends RouterSup {
         } catch (Exception ex) {
         ex.printStackTrace();
         }
-
-        return 0.0;
     }
 }

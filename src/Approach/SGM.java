@@ -33,8 +33,8 @@ public class SGM extends ApproachSupClass {
     HashMap<AEK, Double> _lm_aek = new HashMap<>();
     HashMap<AK, Double> _y_ak = new HashMap<>();
     HashMap<AEK, Double> _z_aek = new HashMap<>();
-    HashMap<AEIJ, Double> _x_aeij = new HashMap<>();
-    HashMap<AEI, Double> _mu_aei = new HashMap<>();
+    HashMap<AEIJ, Double> x_aeij = new HashMap<>();
+    HashMap<AEI, Double> mu_aei = new HashMap<>();
     //
     private int TERMINATION_NUM_ITERS, NO_IMPROVEMENT_LIMIT;
     private double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
@@ -92,9 +92,9 @@ public class SGM extends ApproachSupClass {
         this.isCompensationMode = true;
     }
 
-    public void logging(String funcName,
-                        String _doV0, String _doV1, String _FS0, String _FS1,
-                        String note) {
+    private void logging(String funcName,
+                         String _doV0, String _doV1, String _FS0, String _FS1,
+                         String note) {
         String[] row = {String.format("%f", etc.getWallTime()),
                         String.format("%f", etc.getCpuTime()),
                         String.format("%d", numIters),
@@ -120,7 +120,7 @@ public class SGM extends ApproachSupClass {
     }
 
 
-    public void lmLogging(String [] row) {
+    private void lmLogging(String[] row) {
         try {
             CSVPrinter csvPrinter;
             if (numIters == 0) {
@@ -179,7 +179,8 @@ public class SGM extends ApproachSupClass {
             dualG = (dualObjV0 - F_star) / F_star;
             if (dualG <= TERMINATION_DUEL_GAP) break;
             numIters += 1;
-            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f", numIters, dualG, etc.getCpuTime()));
+            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
+                                                numIters, dualG, etc.getCpuTime(), etc.getWallTime()));
         }
         //
         bestSol.saveSolCSV(etc.solPathCSV);
@@ -345,7 +346,7 @@ public class SGM extends ApproachSupClass {
                         double sumX = 0;
                         for (String j: aeN) {
                             aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                            sumX += _x_aeij.get(aeij);
+                            sumX += x_aeij.get(aeij);
                         }
                         z = z_aek.get(aek);
                         cnst.addTerm(-1, z);
@@ -375,8 +376,8 @@ public class SGM extends ApproachSupClass {
                     for (AEK key: z_aek.keySet()) {
                         bestSol.z_aek.put(key, cplex.getValue(z_aek.get(key)));
                     }
-                    bestSol.mu_aei = new HashMap<>(_mu_aei);
-                    bestSol.x_aeij = new HashMap<>(_x_aeij);
+                    bestSol.mu_aei = new HashMap<>(mu_aei);
+                    bestSol.x_aeij = new HashMap<>(x_aeij);
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -428,7 +429,7 @@ public class SGM extends ApproachSupClass {
                         double sumX = 0.0;
                         for (String j: aeN) {
                             aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                            sumX += _x_aeij.get(aeij);
+                            sumX += x_aeij.get(aeij);
                         }
                         numerator2 += Math.pow(y - z - sumX, 2);
                     }
@@ -467,7 +468,7 @@ public class SGM extends ApproachSupClass {
                     double sumX = 0.0;
                     for (String j: aeN) {
                         aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                        sumX += _x_aeij.get(aeij);
+                        sumX += x_aeij.get(aeij);
                     }
                     lm = _lm_aek.get(aek) + at * (y - z - sumX);
                     if (lm < 0.0) {

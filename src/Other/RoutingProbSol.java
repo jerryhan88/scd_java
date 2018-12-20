@@ -11,6 +11,7 @@ public class RoutingProbSol {
     private HashMap<AEK, Double> lm_aek;
     private int a, e;
     //
+    public double objV;
     public HashMap<AEIJ, Double> x_aeij;
     public HashMap<AEI, Double> mu_aei;
 
@@ -20,6 +21,9 @@ public class RoutingProbSol {
         this.lm_aek = lm_aek;
         this.a = a;
         this.e = e;
+        //
+        x_aeij = new HashMap<>();
+        mu_aei = new HashMap<>();
     }
 
     public int get_aid() {

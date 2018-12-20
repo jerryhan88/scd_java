@@ -1,6 +1,8 @@
 package Approach;
 
 
+import Index.AEI;
+import Index.AEIJ;
 import Other.RoutingProbSol;
 
 import java.util.ArrayList;
@@ -36,7 +38,8 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
     public Double processing() {
         double totalVal = 0.0;
         for (RoutingProbSol rProbSol: subprobsols) {
-            totalVal += sgm.router.solve(rProbSol);
+            sgm.router.solve(rProbSol);
+            totalVal += rProbSol.objV;
         }
         return totalVal;
     }
@@ -72,15 +75,19 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
             for (int i = 0; i < workers.length; i++) {
                 worker = workers[i];
                 totalVal += worker.join();
+                //
+                for (RoutingProbSol rProbSol: worker.subprobsols) {
+                    for (AEIJ key: rProbSol.x_aeij.keySet()) {
+                        sgm.x_aeij.put(key, rProbSol.x_aeij.get(key));
+                    }
+                    for (AEI key: rProbSol.mu_aei.keySet()) {
+                        sgm.mu_aei.put(key, rProbSol.mu_aei.get(key));
+                    }
+                }
             }
-
-
-
-
         } else {
             totalVal += processing();
         }
-
         return totalVal;
     }
 }

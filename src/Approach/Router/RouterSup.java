@@ -4,7 +4,7 @@ import Other.RoutingProbSol;
 
 
 public class RouterSup {
-    public double solve(RoutingProbSol rProbSol) {
+    public void solve(RoutingProbSol rProbSol) {
         throw new RuntimeException("Don't use this super class directly!!");
     }
 

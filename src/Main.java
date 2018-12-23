@@ -12,10 +12,9 @@ import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) {
-        String appName = null;
-        Path prmt_dpath = null;
-        Path sol_dpath = null;
-        Path config_fpath = null;
+        String appName;
+        int timeLimit;
+        Path config_fpath, prmt_dpath, sol_dpath;
         PropertiesLoader properties = null;
         //
         if (args.length != 0) {
@@ -29,6 +28,7 @@ public class Main {
         }
         //
         appName = properties.getProperty("appName");
+        timeLimit = Integer.parseInt(properties.getProperty("TimeLimit"));
         prmt_dpath = Paths.get(properties.getProperty("input_dpath"));
         sol_dpath = Paths.get(properties.getProperty("output_dpath"));
         if (!sol_dpath.toFile().exists()){
@@ -83,6 +83,7 @@ public class Main {
                         sol_dpath.resolve(String.format("sol_%s_%s.ser", prefix, modiAppName)),
                         sol_dpath.resolve(String.format("sol_%s_%s.csv", prefix, modiAppName)),
                         sol_dpath.resolve(String.format("sol_%s_%s.txt", prefix, modiAppName)));
+                etc.setTimeLimit(timeLimit);
                 etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.csv", prefix, modiAppName)));
                 etc.setLmLogPath(sol_dpath.resolve(String.format("LmLog_%s_%s.csv", prefix, modiAppName)));
                 //

@@ -1,6 +1,7 @@
 package Approach;
 
 import Index.*;
+import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
@@ -13,6 +14,24 @@ import Other.Parameter;
 import Other.Solution;
 
 public class ILP extends ApproachSupClass {
+    static class TimeLimitCallback extends IloCplex.MIPInfoCallback {
+        Etc etc;
+        TimeLimitCallback(Etc etc) {
+            this.etc = etc;
+        }
+
+        public void main() throws IloException {
+            if (etc.getWallTime() > etc.getTimeLimit()) {
+                // TODO
+                // Terminate process and save the solution of incumbent!!
+
+            }
+        }
+    }
+
+
+
+
     IloCplex cplex;
     //
     HashMap<AK, IloNumVar> y_ae;
@@ -95,6 +114,7 @@ public class ILP extends ApproachSupClass {
     public void solveModel() {
         try {
             cplex.setOut(new FileOutputStream(etc.logPath.toFile()));
+            cplex.use(new TimeLimitCallback(etc));
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 Solution sol = new Solution();

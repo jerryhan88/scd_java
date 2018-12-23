@@ -7,7 +7,6 @@ import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 
 public class ModelBuilder {
@@ -128,7 +127,8 @@ public class ModelBuilder {
         AE ae = new AE(a, e);
         ArrayList<String> aeS = prmt.S_ae.get(ae);
         ArrayList<String> aeN = prmt.N_ae.get(ae);
-        ArrayList<Integer> ae_uF = prmt.uF_ae.get(ae);
+        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
+        ArrayList<Integer> ae_iF = prmt.iF_ae.get(ae);
         String o_ae = String.format("s0_%d_%d", a, e);
         String d_ae = String.format("s%d_%d_%d", aeS.size() - 1, a, e);
         // Flow conservation given agent k and routine route r
@@ -182,29 +182,29 @@ public class ModelBuilder {
                 cnst.addTerm(1, x);
             }
             cplex.addEq(cnst, 0, String.format("xFD(%d,%d)", a, e));
-            for (int i: ae_uF) {
+            for (int k: ae_iF) {
                 cnst = cplex.linearNumExpr();
                 for (String j: aeN) {
-                    aeij = new AEIJ(a, e, prmt.n_k.get(i), j);
+                    aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                cplex.addEq(cnst, 0, String.format("xFN(%d,%d,%d)", a, e, i));
+                cplex.addEq(cnst, 0, String.format("xFN(%d,%d,%d)", a, e, k));
             }
             // Flow about delivery nodes; only when the warehouse visited
-            for (int i: prmt.K) {
+            for (int k: aeF) {
                 cnst = cplex.linearNumExpr();
                 for (String j: aeN) {
-                    aeij = new AEIJ(a, e, prmt.n_k.get(i), j);
+                    aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
                 for (String j: aeN) {
-                    aeij = new AEIJ(a, e, j, prmt.h_k.get(i));
+                    aeij = new AEIJ(a, e, j, prmt.h_k.get(k));
                     x = x_aeij.get(aeij);
                     cnst.addTerm(-1, x);
                 }
-                cplex.addLe(cnst, 0, String.format("tFC(%d,%d,%d)", a, e, i));
+                cplex.addLe(cnst, 0, String.format("tFC(%d,%d,%d)", a, e, k));
             }
             // Flow conservation
             for (String i: prmt.N) {
@@ -239,6 +239,7 @@ public class ModelBuilder {
         AE ae = new AE(a, e);
         ArrayList<String> aeS = prmt.S_ae.get(ae);
         ArrayList<String> aeN = prmt.N_ae.get(ae);
+        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
         // Arrival time calculation
         try {
             // Time Window
@@ -249,10 +250,10 @@ public class ModelBuilder {
                 cplex.addLe(mu, prmt.be_i.get(i), String.format("TW_U(%d,%d,%s)", a, e, i));
             }
             // Warehouse and Delivery Sequence
-            for (int i: prmt.K) {
-                cplex.addLe(mu_aei.get(new AEI(a, e, prmt.h_k.get(i))),
-                        mu_aei.get(new AEI(a, e, prmt.n_k.get(i))),
-                        String.format("WD_S(%d,%d,%d)", a, e, i));
+            for (int k: aeF) {
+                cplex.addLe(mu_aei.get(new AEI(a, e, prmt.h_k.get(k))),
+                        mu_aei.get(new AEI(a, e, prmt.n_k.get(k))),
+                        String.format("WD_S(%d,%d,%d)", a, e, k));
             }
             // Routine route preservation
             for (String i: aeS) {

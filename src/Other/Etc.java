@@ -7,6 +7,7 @@ import java.util.Date;
 
 
 public class Etc {
+    int timeLimit;
     private Date startDate;
     private double startCpuTime;
     public Path logPath = null;
@@ -15,11 +16,6 @@ public class Etc {
     public Path solPathSER = null;
     public Path solPathCSV = null;
     public Path solPathTXT = null;
-
-
-    public Etc() {
-        startDate = new Date();
-    }
 
     public Etc(Path solPathJSN, Path solPathSER, Path solPathCSV, Path solPathTXT) {
         startDate = new Date();
@@ -30,17 +26,12 @@ public class Etc {
         this.solPathTXT = solPathTXT;
     }
 
-    public void setLogPath(Path _logPath) {
-        logPath = _logPath;
+    public void setTimeLimit(int timeLimit) {
+        this.timeLimit = timeLimit;
     }
 
-    public void setLmLogPath(Path _logPath) {
-        lmLogPath = _logPath;
-    }
-
-    private double getCPU_TS() {
-        OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        return operatingSystemMXBean.getProcessCpuTime() / 1000000000.;
+    public int getTimeLimit(){
+        return timeLimit;
     }
 
     public double getWallTime() {
@@ -48,7 +39,20 @@ public class Etc {
         return (endDate.getTime()-startDate.getTime()) / 1000.;
     }
 
+    private double getCPU_TS() {
+        OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        return operatingSystemMXBean.getProcessCpuTime() / 1000000000.;
+    }
+
     public double getCpuTime() {
         return getCPU_TS() - startCpuTime;
+    }
+
+    public void setLogPath(Path _logPath) {
+        logPath = _logPath;
+    }
+
+    public void setLmLogPath(Path _logPath) {
+        lmLogPath = _logPath;
     }
 }

@@ -36,7 +36,7 @@ public class Parameter implements Serializable {
     public HashMap<String, Double> ga_i = new HashMap<>();
     public HashMap<IJ, Double> t_ij = new HashMap<>();
     public HashMap<AE, ArrayList> F_ae = new HashMap<>();
-    public HashMap<AE, ArrayList> uF_ae = new HashMap<>();
+    public HashMap<AE, ArrayList> iF_ae = new HashMap<>();
     public double M;
 
 
@@ -168,7 +168,7 @@ public class Parameter implements Serializable {
                             ae_uF.add(_k);
                         }
                     }
-                     _prmt.uF_ae.put(_ae, ae_uF);
+                     _prmt.iF_ae.put(_ae, ae_uF);
                 }
             }
             _prmt.M = _prmt.N.size() * (Collections.max(_prmt.t_ij.values()) + Collections.max(_prmt.ga_i.values()));

@@ -1,16 +1,23 @@
 package Index;
 
 public class AEI extends IndexSupCls {
-    int k, r;
-    String i;
-    public AEI(int k, int r, String i) {
-        this.k = k;
-        this.r = r;
+    private int a, e;
+    private String i;
+    public AEI(int a, int e, String i) {
+        this.a = a;
+        this.e = e;
         this.i = i;
-        notation = String.format("[%d,%d,%s]", this.k, this.r, this.i);
+        set_label();
     }
 
-    public String get_label() {
-        return String.format("%d&%d&%s", k, r, i);
+    public AEI(int a, Object e, Object i) {
+        this.a = a;
+        this.e = (Integer) e;
+        this.i = (String) i;
+        set_label();
+    }
+
+    private void set_label() {
+        label = String.format("%d&%d&%s", this.a, this.e, this.i);
     }
 }

@@ -3,18 +3,22 @@ package Index;
 import java.io.Serializable;
 
 public class IndexSupCls implements Serializable {
-    String notation;
+    String label;
 
     public String toString() {
-        return notation;
+        return label;
     }
 
     public boolean equals(Object _o) {
         IndexSupCls o = (IndexSupCls) _o;
-        return this.notation.equals(o.notation);
+        return this.label.equals(o.label);
     }
 
     public int hashCode() {
-        return notation.hashCode();
+        return label.hashCode();
+    }
+
+    public String get_label() {
+        return label;
     }
 }

@@ -1,5 +1,7 @@
 package Approach;
 
+import Approach.Router.RouterBNB;
+import Approach.Router.RouterGH;
 import Approach.Router.RouterILP;
 import Approach.Router.RouterSup;
 import Index.*;
@@ -22,44 +24,45 @@ import java.util.concurrent.ForkJoinPool;
 public class SGM extends ApproachSupClass {
     RouterSup router;
     //
-    IloCplex cplex;
+    private IloCplex cplex;
     //
     private int numIters, noUpdateCounter;
-    private double at, ut, dualObjV0, F_star, F1;
-    private double dualObjV1;
-    private double ObjV_TAA;
-    double objV_Routing;
-    Solution bestSol;
-    HashMap<AEK, Double> _lm_aek = new HashMap<>();
-    HashMap<AK, Double> _y_ak = new HashMap<>();
-    HashMap<AEK, Double> _z_aek = new HashMap<>();
-    HashMap<AEIJ, Double> x_aeij = new HashMap<>();
-    HashMap<AEI, Double> mu_aei = new HashMap<>();
+    private double at, ut, L_lm_star, F_star, F1;
+    private double L_lm1;
+    private double L1V, L2V;
+    private Solution bestSol;
+    private HashMap<AK, Double> y_ak;
+    private HashMap<AEK, Double> z_aek;
+    HashMap<AEIJ, Double> x_aeij;
+    HashMap<AEI, Double> mu_aei;
+    HashMap<AEK, Double> lm_aek;
     //
-    private int TERMINATION_NUM_ITERS, NO_IMPROVEMENT_LIMIT;
+    private int NO_IMPROVEMENT_LIMIT;
     private double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
-    //
-    private double COMPENSATION_LIMIT = -1.0;
-    private double COMPENSATION_RATE = -1.0;
-    private boolean isCompensationMode = false;
-    //
-    private double INIT_LAMBDA_MULIPLYER = 2.0;
     private int NUM_LAMBDA = 0;
     //
     public SGM(Parameter prmt, Etc etc) {
         super(prmt, etc);
+        y_ak = new HashMap<>();
+        z_aek = new HashMap<>();
+        x_aeij = new HashMap<>();
+        mu_aei = new HashMap<>();
+        lm_aek = new HashMap<>();
+        //
+        double INIT_LAMBDA_MULIPLYER = 2.0;
         at = 0.0;
         ut = 2.0;
-        dualObjV0 = -Double.MAX_VALUE;
-        F_star = Double.MAX_VALUE;
+        L_lm_star = Double.MAX_VALUE;
+        F_star = -Double.MAX_VALUE;
         numIters = 0;
         noUpdateCounter = 0;
-        ArrayList<Integer> aE;
+        ArrayList aE;
         for (int a : this.prmt.A) {
             aE = this.prmt.E_a.get(a);
-            for (int e : aE) {
+            for (Object e : aE) {
                 for (int k : this.prmt.K) {
-                    _lm_aek.put(new AEK(a, e, k), this.prmt.r_k.get(k) * INIT_LAMBDA_MULIPLYER);
+                    //
+                    lm_aek.put(new AEK(a, e, k), this.prmt.r_k.get(k) * INIT_LAMBDA_MULIPLYER);
                     NUM_LAMBDA += 1;
                 }
             }
@@ -67,29 +70,23 @@ public class SGM extends ApproachSupClass {
     }
 
     public void set_router(String router) {
-        if (router.equals("ILP")) {
-            this.router = new RouterILP();
+        switch (router) {
+            case "ILP":
+                this.router = new RouterILP();
+                break;
+            case "BNB":
+                this.router = new RouterBNB();
+                break;
+            case "GH":
+                this.router = new RouterGH();
+                break;
         }
     }
 
-    public void set_parameters(int TERMINATION_NUM_ITERS, double TERMINATION_DUEL_GAP,
-                               int NO_IMPROVEMENT_LIMIT, double STEP_DECREASE_RATE) {
-        this.TERMINATION_NUM_ITERS = TERMINATION_NUM_ITERS;
+    public void set_parameters(double TERMINATION_DUEL_GAP, int NO_IMPROVEMENT_LIMIT, double STEP_DECREASE_RATE) {
         this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
         this.NO_IMPROVEMENT_LIMIT = NO_IMPROVEMENT_LIMIT;
         this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
-    }
-
-    public void set_parameters(int TERMINATION_NUM_ITERS, double TERMINATION_DUEL_GAP,
-                               int NO_IMPROVEMENT_LIMIT, double STEP_DECREASE_RATE,
-                               double COMPENSATION_LIMIT, double COMPENSATION_RATE) {
-        this.TERMINATION_NUM_ITERS = TERMINATION_NUM_ITERS;
-        this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
-        this.NO_IMPROVEMENT_LIMIT = NO_IMPROVEMENT_LIMIT;
-        this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
-        this.COMPENSATION_LIMIT = COMPENSATION_LIMIT;
-        this.COMPENSATION_RATE = COMPENSATION_RATE;
-        this.isCompensationMode = true;
     }
 
     private void logging(String funcName,
@@ -107,7 +104,7 @@ public class SGM extends ApproachSupClass {
                 csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString()), CSVFormat.DEFAULT
                         .withHeader("wallT", "cpuT", "Iteration",
                                     "Function",
-                                    "DualObjV0", "DualObjV1", "F*", "F1",
+                                    "L_lm*", "L_lm1", "F*", "F1",
                                     "Note"));
             } else {
                 csvPrinter = new CSVPrinter(new FileWriter(etc.logPath.toString(), true), CSVFormat.DEFAULT);
@@ -155,16 +152,15 @@ public class SGM extends ApproachSupClass {
         logging("Initialization",
                 " ", " ", " ", " ",
                 " ");
-        double dualG;
-        while (numIters < TERMINATION_NUM_ITERS) {
+        while (etc.getWallTime() < etc.getTimeLimit()) {
             solveDuals();
             if (numIters == 0) {
                 logging("solveDuals",
-                        "-inf", String.format("%.4f", dualObjV1), " ", " ",
+                        "inf", String.format("%.4f", L_lm1), " ", " ",
                         " ");
             } else {
                 logging("solveDuals",
-                        String.format("%.4f", dualObjV0), String.format("%.4f", dualObjV1), " ", " ",
+                        String.format("%.4f", L_lm_star), String.format("%.4f", L_lm1), " ", " ",
                         " ");
             }
             primalExtraction();
@@ -176,11 +172,16 @@ public class SGM extends ApproachSupClass {
             logging("UpdateLM",
                     " ", " ", " ", " ",
                     String.format("at: %f  ut: %f", at, ut));
-            dualG = (dualObjV0 - F_star) / F_star;
+            double dualG = (L_lm_star - F_star) / F_star;
+            if (dualG < bestSol.dualG)
+                bestSol.dualG = dualG;
+            logging("IterSummary",
+                    " ", " ", " ", " ",
+                    String.format("Dual Gap: %f", bestSol.dualG));
+            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
+                    numIters, bestSol.dualG, etc.getCpuTime(), etc.getWallTime()));
             if (dualG <= TERMINATION_DUEL_GAP) break;
             numIters += 1;
-            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
-                                                numIters, dualG, etc.getCpuTime(), etc.getWallTime()));
         }
         //
         bestSol.saveSolCSV(etc.solPathCSV);
@@ -189,25 +190,24 @@ public class SGM extends ApproachSupClass {
 //        bestSol.saveSolSER(etc.solPathSER);
     }
     private void solveDuals() {
-        dualObjV1 = 0.0;
-        ObjV_TAA = 0.0;
-        objV_Routing = 0.0;
+        L1V = 0.0;
+        L2V = 0.0;
         //
         solve_TAA();
         logging("dual_solve_TAA",
                 " ", " ", " ", " ",
-                String.format("ObjV_TAA: %.4f", ObjV_TAA));
+                String.format("L1V: %.4f", L1V));
         solve_Routing();
         logging("dual_solve_Routing",
                 " ", " ", " ", " ",
-                String.format("objV_Routing: %.4f", objV_Routing));
-        dualObjV1 = ObjV_TAA + objV_Routing;
+                String.format("L2V: %.4f", L2V));
+        L_lm1 = L1V + L2V;
     }
 
     private void solve_TAA() {
         double lm;
         double r, p;
-        ArrayList<Integer> aE;
+        ArrayList aE;
         IloNumVar y, z;
         IloLinearNumExpr obj;
         AK ak;
@@ -221,12 +221,14 @@ public class SGM extends ApproachSupClass {
             cplex = new IloCplex();
             for (int a : prmt.A) {
                 for (int k : prmt.K) {
-                    y_ak.put(new AK(a, k), cplex.boolVar(String.format("y(%d,%d)", a, k)));
+                    ak = new AK(a, k);
+                    y_ak.put(ak, cplex.boolVar(String.format("y(%s)", ak.get_label())));
                 }
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     for (int k : prmt.K) {
-                        z_aek.put(new AEK(a, e, k), cplex.boolVar(String.format("z(%d,%d,%d)", a, e, k)));
+                        aek = new AEK(a, e, k);
+                        z_aek.put(aek, cplex.boolVar(String.format("z(%s)", aek.get_label())));
                     }
                 }
             }
@@ -236,7 +238,7 @@ public class SGM extends ApproachSupClass {
                 r = prmt.r_k.get(k);
                 for (int a : prmt.A) {
                     aE = prmt.E_a.get(a);
-                    for (int e : aE) {
+                    for (Object e : aE) {
                         ae = new AE(a, e);
                         aek = new AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
@@ -253,9 +255,9 @@ public class SGM extends ApproachSupClass {
                     ak = new AK(a, k);
                     y = y_ak.get(ak);
                     aE = prmt.E_a.get(a);
-                    for (int e : aE) {
+                    for (Object e : aE) {
                         aek = new AEK(a, e, k);
-                        lm = _lm_aek.get(aek);
+                        lm = lm_aek.get(aek);
                         obj.addTerm(lm, y);
                         z = z_aek.get(aek);
                         obj.addTerm(-lm, z);
@@ -269,12 +271,12 @@ public class SGM extends ApproachSupClass {
             cplex.setOut(null);
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
-                ObjV_TAA = cplex.getObjValue();
+                L1V = -cplex.getObjValue();
                 for (AK key: y_ak.keySet()) {
-                    _y_ak.put(key, cplex.getValue(y_ak.get(key)));
+                    this.y_ak.put(key, cplex.getValue(y_ak.get(key)));
                 }
                 for (AEK key: z_aek.keySet()) {
-                    _z_aek.put(key, cplex.getValue(z_aek.get(key)));
+                    this.z_aek.put(key, cplex.getValue(z_aek.get(key)));
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -285,10 +287,16 @@ public class SGM extends ApproachSupClass {
         }
     }
 
+    private void solve_Routing() {
+        ForkJoinPool pool = ForkJoinPool.commonPool();
+        Routing_PL_worker routingPLhandler = new Routing_PL_worker(this);
+        L2V = pool.invoke(routingPLhandler);
+    }
+
     private void primalExtraction() {
         double r, p;
-        ArrayList<Integer> aE;
-        ArrayList<String> aeN;
+        ArrayList aE;
+        ArrayList aeN;
         IloLinearNumExpr obj, cnst;
         IloNumVar y, z;
         AK ak;
@@ -301,12 +309,14 @@ public class SGM extends ApproachSupClass {
             cplex = new IloCplex();
             for (int a : prmt.A) {
                 for (int k : prmt.K) {
-                    y_ak.put(new AK(a, k), cplex.boolVar(String.format("y(%d,%d)", a, k)));
+                    ak = new AK(a, k);
+                    y_ak.put(ak, cplex.boolVar(String.format("y(%s)", ak.get_label())));
                 }
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     for (int k : prmt.K) {
-                        z_aek.put(new AEK(a, e, k), cplex.boolVar(String.format("z(%d,%d,%d)", a, e, k)));
+                        aek = new AEK(a, e, k);
+                        z_aek.put(aek, cplex.boolVar(String.format("z(%s)", aek.get_label())));
                     }
                 }
             }
@@ -319,7 +329,7 @@ public class SGM extends ApproachSupClass {
                     y = y_ak.get(ak);
                     obj.addTerm(r, y);
                     aE = prmt.E_a.get(a);
-                    for (int e : aE) {
+                    for (Object e : aE) {
                         ae = new AE(a, e);
                         aek = new AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
@@ -334,7 +344,7 @@ public class SGM extends ApproachSupClass {
             // Complicated and Combined constraints Q3
             for (int a : prmt.A) {
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     ae = new AE(a, e);
                     aeN = prmt.N_ae.get(ae);
                     for (int k: prmt.K) {
@@ -344,13 +354,13 @@ public class SGM extends ApproachSupClass {
                         y = y_ak.get(ak);
                         cnst.addTerm(1, y);
                         double sumX = 0;
-                        for (String j: aeN) {
+                        for (Object j: aeN) {
                             aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
                             sumX += x_aeij.get(aeij);
                         }
                         z = z_aek.get(aek);
                         cnst.addTerm(-1, z);
-                        cplex.addLe(cnst, sumX, String.format("CC(%d,%d,%d)", a, e, k));
+                        cplex.addLe(cnst, sumX, String.format("CC(%s)", aek.get_label()));
                     }
                 }
             }
@@ -358,21 +368,21 @@ public class SGM extends ApproachSupClass {
             cplex.setOut(null);
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
-                F1 = -cplex.getObjValue();
-                if (F1 < F_star) {
+                F1 = cplex.getObjValue();
+                if (F1 > F_star) {
                     F_star = F1;
                     //
                     bestSol = new Solution();
                     bestSol.prmt = prmt;
-                    bestSol.objV = -F_star;
-                    bestSol.dualG = ((dualObjV1 > dualObjV0 ? dualObjV1 : dualObjV0) - F_star) / F_star;
+                    bestSol.objV = F_star;
+                    bestSol.dualG = ((L_lm1 > L_lm_star ? L_lm_star : L_lm1) - F_star) / F_star;
                     bestSol.cpuT = etc.getCpuTime();
                     bestSol.wallT = etc.getWallTime();
                     bestSol.y_ak = new HashMap<>();
                     for (AK key: y_ak.keySet()) {
                         bestSol.y_ak.put(key, cplex.getValue(y_ak.get(key)));
                     }
-                    bestSol.z_aek = new HashMap<>(_z_aek);
+                    bestSol.z_aek = new HashMap<>(this.z_aek);
                     for (AEK key: z_aek.keySet()) {
                         bestSol.z_aek.put(key, cplex.getValue(z_aek.get(key)));
                     }
@@ -390,93 +400,87 @@ public class SGM extends ApproachSupClass {
 
     private void update_step_size() {
         double y, z;
-        ArrayList<Integer> aE;
-        ArrayList<String> aeN;
+        ArrayList aE;
+        ArrayList aeN;
         AK ak;
         AE ae;
         AEK aek;
         AEIJ aeij;
-        //   dualObjV1: at new value
-        //   dualObjV0: the old one
-        if (isCompensationMode && numIters !=0 && COMPENSATION_LIMIT < (dualObjV0 - dualObjV1) / dualObjV0) {
-            at *= COMPENSATION_RATE;
+        //   L_lm1: the new value
+        //   L_lm_star: the old one
+        if (L_lm1 < L_lm_star) {
+            // Better solution
+            L_lm_star = L_lm1;
+            noUpdateCounter = 0;
         } else {
-            if (dualObjV1 > dualObjV0) {
-                // Better solution
-                dualObjV0 = dualObjV1;
+            // No improvement
+            noUpdateCounter += 1;
+            if (noUpdateCounter == NO_IMPROVEMENT_LIMIT) {
+                ut *= STEP_DECREASE_RATE;
                 noUpdateCounter = 0;
-            } else {
-                // No improvement
-                noUpdateCounter += 1;
-                if (noUpdateCounter == NO_IMPROVEMENT_LIMIT) {
-                    ut *= STEP_DECREASE_RATE;
-                    noUpdateCounter = 0;
-                }
             }
-            // Update at (Scale for the movement)
-            double denominator = ut * (F_star - dualObjV0);
-            double numerator2 = 0.0;
-            for (int k: prmt.K) {
-                for (int a: prmt.A) {
-                    ak = new AK(a, k);
-                    y = _y_ak.get(ak);
-                    aE = prmt.E_a.get(a);
-                    for (int e : aE) {
-                        ae = new AE(a, e);
-                        aek = new AEK(a, e, k);
-                        z = _z_aek.get(aek);
-                        aeN = prmt.N_ae.get(ae);
-                        double sumX = 0.0;
-                        for (String j: aeN) {
-                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                            sumX += x_aeij.get(aeij);
-                        }
-                        numerator2 += Math.pow(y - z - sumX, 2);
-                    }
-                }
-            }
-            at = denominator / numerator2;
         }
+        // Update at (Scale for the movement)
+        double denominator = ut * (L_lm_star - F_star);
+        double numerator2 = 0.0;
+        for (int k: prmt.K) {
+            for (int a: prmt.A) {
+                ak = new AK(a, k);
+                y = y_ak.get(ak);
+                aE = prmt.E_a.get(a);
+                for (Object e : aE) {
+                    ae = new AE(a, e);
+                    aek = new AEK(a, e, k);
+                    z = z_aek.get(aek);
+                    aeN = prmt.N_ae.get(ae);
+                    double sumX = 0.0;
+                    for (Object j: aeN) {
+                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                        sumX += x_aeij.get(aeij);
+                    }
+                    numerator2 += Math.pow(y - z - sumX, 2);
+                }
+            }
+        }
+        at = denominator / numerator2;
     }
 
     private void UpdateLM() {
         double y, z;
         double lm;
-        ArrayList<Integer> aE;
-        ArrayList<String> aeN;
+        ArrayList aE;
+        ArrayList aeN;
         AK ak;
         AE ae;
         AEK aek;
         AEIJ aeij;
         // Update the step size, at, first
         update_step_size();
-
-
         // Update multipliers
         String [] row = new String[NUM_LAMBDA];
         int lmIndex = 0;
         for (int a: prmt.A) {
             aE = prmt.E_a.get(a);
-            for (int e: aE) {
+            for (Object e: aE) {
                 ae = new AE(a, e);
                 aeN = prmt.N_ae.get(ae);
                 for (int k: prmt.K) {
                     ak = new AK(a, k);
-                    y = _y_ak.get(ak);
+                    y = y_ak.get(ak);
                     aek = new AEK(a, e, k);
-                    z = _z_aek.get(aek);
+                    z = z_aek.get(aek);
                     double sumX = 0.0;
-                    for (String j: aeN) {
+                    for (Object j: aeN) {
                         aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
                         sumX += x_aeij.get(aeij);
                     }
-                    lm = _lm_aek.get(aek) + at * (y - z - sumX);
+                    lm = lm_aek.get(aek) + at * (y - z - sumX);
                     if (lm < 0.0) {
-                        _lm_aek.put(aek, 0.0);
+                        lm_aek.put(aek, 0.0);
                     } else {
-                        _lm_aek.put(aek, lm);
+                        lm_aek.put(aek, lm);
                     }
-                    row[lmIndex] = String.format("%f", _lm_aek.get(aek));
+                    row[lmIndex] = String.format("%f", lm_aek.get(aek));
                     lmIndex += 1;
                 }
             }
@@ -484,9 +488,4 @@ public class SGM extends ApproachSupClass {
         lmLogging(row);
     }
 
-    public void solve_Routing() {
-        ForkJoinPool pool = ForkJoinPool.commonPool();
-        Routing_PL_worker routingPLhandler = new Routing_PL_worker(this);
-        objV_Routing = pool.invoke(routingPLhandler);
-    }
 }

@@ -1,4 +1,4 @@
-package Approach.BranchAndBound;
+package Approach.Router.BranchAndBound;
 
 import Index.AE;
 import Index.AEIJ;
@@ -8,9 +8,9 @@ import Other.Parameter;
 
 import java.util.*;
 
-public class TreeBnB implements Runnable{
+public class TreeBNB {
     Parameter prmt;
-    int a, e;
+    private int a, e;
     double a_v, a_w, ae_l, ae_u;
     HashMap<Integer, Double> lm_k;
     //
@@ -21,42 +21,42 @@ public class TreeBnB implements Runnable{
     PriorityQueue<NodeBnB> pq;
     NodeBnB incumbent = null;
 
-    public TreeBnB(Parameter _prmt, int _a, int _e, HashMap<AEK, Double> _lm_aek) {
-        AE ae = new AE(_a, _e);
-        prmt = _prmt;
-        a = _a;
-        e = _e;
-        a_v = _prmt.v_a.get(_a);
-        a_w = _prmt.w_a.get(_a);
-        ae_l = prmt.l_ae.get(ae);
-        ae_u = prmt.u_ae.get(ae);
+    public TreeBNB(Parameter prmt, int a, int e, HashMap<AEK, Double> lm_aek) {
+        this.prmt = prmt;
+        this.a = a;
+        this.e = e;
+        //
+        AE ae = new AE(a, e);
+        a_v = prmt.v_a.get(a);
+        a_w = prmt.w_a.get(a);
+        ae_l = this.prmt.l_ae.get(ae);
+        ae_u = this.prmt.u_ae.get(ae);
         lm_k = new HashMap<>();
-        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
+        ArrayList aeF = this.prmt.F_ae.get(ae);
         ArrayList<Integer> KnM = new ArrayList<>();
-        for (int k: aeF) {
-            if (_lm_aek.get(new AEK(a, e, k)) > 0) {
-                KnM.add(k);
-                lm_k.put(k, _lm_aek.get(new AEK(a, e, k)));
+        AEK aek;
+        for (Object k: aeF) {
+            aek = new AEK(this.a, this.e, k);
+            if (lm_aek.get(aek) > 0) {
+                KnM.add((Integer) k);
+                lm_k.put((Integer) k, lm_aek.get(aek));
             }
         }
-        ArrayList<String> Sn = new ArrayList<>(prmt.S_ae.get(ae));
+        ArrayList Sn = new ArrayList<>(this.prmt.S_ae.get(ae));
         KnM.sort(Comparator.comparingDouble((Integer o) -> lm_k.get(o)));
         //
-        pq = new PriorityQueue<>(new Comparator<NodeBnB>() {
-            @Override
-            public int compare(NodeBnB o1, NodeBnB o2) {
-                if (o1.tLB < o2.tLB)
+        pq = new PriorityQueue<>((o1, o2) -> {
+            if (o1.tLB < o2.tLB)
+                return 1;
+            else if (o1.tLB > o2.tLB)
+                return -1;
+            else {
+                if (o1.upperBound < o2.upperBound)
                     return 1;
-                else if (o1.tLB > o2.tLB)
+                else if (o1.upperBound > o2.upperBound)
                     return -1;
-                else {
-                    if (o1.upperBound < o2.upperBound)
-                        return 1;
-                    else if (o1.upperBound > o2.upperBound)
-                        return -1;
-                    else
-                        return 0;
-                }
+                else
+                    return 0;
             }
         });
         pq.add(new NodeBnB(this, KnM, Sn));
@@ -71,6 +71,7 @@ public class TreeBnB implements Runnable{
 
     private void branch() {
         NodeBnB tn = pq.poll();
+        assert tn != null;
         if (incumbent != null && tn.upperBound <= incumbent.lowerBound)
             return;
         if (tn.tLB == tn.upperBound) {
@@ -96,9 +97,9 @@ public class TreeBnB implements Runnable{
     void update_dvs() {
         x_aeij = new HashMap<>();
         mu_aei = new HashMap<>();
-        ArrayList<String> aeN = prmt.N_ae.get(new AE(a, e));
-        for (String i: aeN) {
-            for (String j: aeN) {
+        ArrayList aeN = prmt.N_ae.get(new AE(a, e));
+        for (Object i: aeN) {
+            for (Object j: aeN) {
                 x_aeij.put(new AEIJ(a, e, i, j), 0.0);
             }
             mu_aei.put(new AEI(a, e, i), 0.0);
@@ -114,11 +115,6 @@ public class TreeBnB implements Runnable{
         for (String i: arrivalTime.keySet()) {
             mu_aei.put(new AEI(a, e, i), arrivalTime.get(i));
         }
-    }
-
-    @Override
-    public void run() {
-        solve();
     }
 }
 

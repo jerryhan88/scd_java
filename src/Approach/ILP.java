@@ -15,44 +15,99 @@ import Other.Solution;
 
 public class ILP extends ApproachSupClass {
     static class TimeLimitCallback extends IloCplex.MIPInfoCallback {
+        Parameter prmt;
         Etc etc;
-        TimeLimitCallback(Etc etc) {
+        //
+        HashMap<AK, IloNumVar> y_ak;
+        HashMap<AEK, IloNumVar> z_aek;
+        HashMap<AEIJ, IloNumVar> x_aeij;
+        HashMap<AEI, IloNumVar> mu_aei;
+
+        TimeLimitCallback(Parameter prmt, Etc etc,
+                          HashMap<AK, IloNumVar> y_ak,
+                          HashMap<AEK, IloNumVar> z_aek,
+                          HashMap<AEIJ, IloNumVar> x_aeij,
+                          HashMap<AEI, IloNumVar> mu_aei) {
+            this.prmt = prmt;
             this.etc = etc;
+            //
+            this.y_ak = y_ak;
+            this.z_aek = z_aek;
+            this.x_aeij = x_aeij;
+            this.mu_aei = mu_aei;
         }
 
         public void main() throws IloException {
             if (etc.getWallTime() > etc.getTimeLimit()) {
-                // TODO
-                // Terminate process and save the solution of incumbent!!
-
+                Solution sol = new Solution();
+                sol.prmt = prmt;
+                sol.cpuT = etc.getCpuTime();
+                sol.wallT = etc.getWallTime();
+                if (hasIncumbent()) {
+                    sol.objV = getIncumbentObjValue();
+                    sol.dualG = getMIPRelativeGap();
+                    //
+                    ArrayList aE;
+                    ArrayList aeN;
+                    AK ak;
+                    AEK aek;
+                    AEIJ aeij;
+                    AEI aei;
+                    for (int a : prmt.A) {
+                        for (int k : prmt.K) {
+                            ak = new AK(a, k);
+                            sol.y_ak.put(ak, getIncumbentValue(y_ak.get(ak)));
+                        }
+                        aE = prmt.E_a.get(a);
+                        for (Object e : aE) {
+                            for (int k : prmt.K) {
+                                aek = new AEK(a, e, k);
+                                sol.z_aek.put(aek, getIncumbentValue(z_aek.get(aek)));
+                            }
+                            aeN = prmt.N_ae.get(new AE(a, e));
+                            for (Object i: aeN) {
+                                for (Object j: aeN) {
+                                    aeij = new AEIJ(a, e, i, j);
+                                    sol.x_aeij.put(aeij, getIncumbentValue(x_aeij.get(aeij)));
+                                }
+                                aei = new AEI(a, e, i);
+                                sol.mu_aei.put(aei, getIncumbentValue(mu_aei.get(aei)));
+                            }
+                        }
+                    }
+                    sol.saveSolCSV(etc.solPathCSV);
+                    sol.saveSolTXT(etc.solPathTXT);
+                } else {
+                    sol.objV = -1.0;
+                    sol.dualG = -1.0;
+                    //
+                    sol.saveSolCSV(etc.solPathCSV);
+                }
+                abort();
             }
         }
     }
-
-
-
-
-    IloCplex cplex;
     //
-    HashMap<AK, IloNumVar> y_ae;
-    HashMap<AEK, IloNumVar> z_aek;
-    HashMap<AEIJ, IloNumVar> x_aeij;
-    HashMap<AEI, IloNumVar> mu_aei;
+    private IloCplex cplex;
+    private HashMap<AK, IloNumVar> y_ak;
+    private HashMap<AEK, IloNumVar> z_aek;
+    private HashMap<AEIJ, IloNumVar> x_aeij;
+    private HashMap<AEI, IloNumVar> mu_aei;
 
     public ILP(Parameter prmt, Etc etc) {
         super(prmt, etc);
         //
-        y_ae = new HashMap<>();
+        y_ak = new HashMap<>();
         z_aek = new HashMap<>();
         mu_aei = new HashMap<>();
         x_aeij = new HashMap<>();
     }
 
-    public void buildModel() {
+    private void buildModel() {
         try {
             double r, p;
-            ArrayList<Integer> aE;
-            ArrayList<String> aeN;
+            ArrayList aE;
+            ArrayList aeN;
             IloNumVar y, z, x;
             IloLinearNumExpr obj, cnst;
             AK ak;
@@ -61,17 +116,17 @@ public class ILP extends ApproachSupClass {
             AEIJ aeij;
             //
             cplex = new IloCplex();
-            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ae, z_aek, x_aeij, mu_aei);
+            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ak, z_aek, x_aeij, mu_aei);
             //
             obj = cplex.linearNumExpr();
             for (int k : prmt.K) {
                 for (int a : prmt.A) {
                     ak = new AK(a, k);
                     r = prmt.r_k.get(k);
-                    y = y_ae.get(ak);
+                    y = y_ak.get(ak);
                     obj.addTerm(r, y);
                     aE = prmt.E_a.get(a);
-                    for (int e : aE) {
+                    for (Object e : aE) {
                         ae = new AE(a, e);
                         aek = new AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
@@ -82,27 +137,27 @@ public class ILP extends ApproachSupClass {
             }
             cplex.addMaximize(obj);
             //
-            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ae, z_aek); //Q1
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
             ModelBuilder.def_Routing_cnsts(prmt, cplex, x_aeij, mu_aei); //Q2
             // Complicated and Combined constraints Q3
             for (int a : prmt.A) {
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     ae = new AE(a, e);
                     aeN = prmt.N_ae.get(ae);
                     for (int k: prmt.K) {
                         ak = new AK(a, k);
                         aek = new AEK(a, e, k);
                         cnst = cplex.linearNumExpr();
-                        y = y_ae.get(ak);
+                        y = y_ak.get(ak);
                         cnst.addTerm(1, y);
-                        for (String j: aeN) {
+                        for (Object j: aeN) {
                             aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
                             x = x_aeij.get(aeij);
                             cnst.addTerm(-1, x);
                         }
                         z = z_aek.get(aek);
-                        cplex.addLe(cnst, z, String.format("CC(%d,%d,%d)", a, e, k));
+                        cplex.addLe(cnst, z, String.format("CC(%s)", aek.get_label()));
                     }
                 }
             }
@@ -111,10 +166,11 @@ public class ILP extends ApproachSupClass {
         }
     }
 
-    public void solveModel() {
+    private void solveModel() {
         try {
             cplex.setOut(new FileOutputStream(etc.logPath.toFile()));
-            cplex.use(new TimeLimitCallback(etc));
+            cplex.use(new TimeLimitCallback(prmt, etc,
+                    y_ak, z_aek, x_aeij, mu_aei));
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 Solution sol = new Solution();
@@ -123,8 +179,8 @@ public class ILP extends ApproachSupClass {
                 sol.dualG = cplex.getMIPRelativeGap();
                 sol.cpuT = etc.getCpuTime();
                 sol.wallT = etc.getWallTime();
-                for (AK key: y_ae.keySet()) {
-                    sol.y_ak.put(key, cplex.getValue(y_ae.get(key)));
+                for (AK key: y_ak.keySet()) {
+                    sol.y_ak.put(key, cplex.getValue(y_ak.get(key)));
                 }
                 for (AEK key: z_aek.keySet()) {
                     sol.z_aek.put(key, cplex.getValue(z_aek.get(key)));
@@ -139,9 +195,11 @@ public class ILP extends ApproachSupClass {
                 sol.saveSolTXT(etc.solPathTXT);
 //                sol.saveSolJSN(etc.solPathJSN);
 //                sol.saveSolSER(etc.solPathSER);
-            } else {
-                cplex.output().println("Other.Solution status = " + cplex.getStatus());
+            } else if (cplex.getStatus() == IloCplex.Status.InfeasibleOrUnbounded) {
                 cplex.exportModel(String.format("%s.lp", prmt.problemName));
+            }
+            else {
+                cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();
         } catch (Exception ex) {

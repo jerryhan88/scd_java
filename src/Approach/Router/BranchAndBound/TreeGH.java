@@ -1,4 +1,4 @@
-package Approach.BranchAndBound;
+package Approach.Router.BranchAndBound;
 
 import Index.AEK;
 import Other.Parameter;
@@ -6,13 +6,14 @@ import Other.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class TreeGH extends TreeBnB {
-    public TreeGH(Parameter _prmt, int _a, int _e, HashMap<AEK, Double> _lm_aek) {
-        super(_prmt, _a, _e, _lm_aek);
+public class TreeGH extends TreeBNB {
+    public TreeGH(Parameter prmt, int a, int e, HashMap<AEK, Double> lm_aek) {
+        super(prmt, a, e, lm_aek);
     }
 
     private boolean branch() {
         NodeBnB tn = pq.poll();
+        assert tn != null;
         if (incumbent != null && tn.upperBound <= incumbent.lowerBound)
             return false;
         if (tn.tLB == tn.upperBound) {

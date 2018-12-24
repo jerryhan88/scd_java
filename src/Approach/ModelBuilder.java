@@ -16,24 +16,32 @@ public class ModelBuilder {
                              HashMap<AEK, IloNumVar> z_aek,
                              HashMap<AEIJ, IloNumVar> x_aeij,
                              HashMap<AEI, IloNumVar> mu_aei){
-        ArrayList<Integer> aE;
-        ArrayList<String> aeN;
+        AK ak;
+        AEK aek;
+        AEIJ aeij;
+        AEI aei;
+        ArrayList aE;
+        ArrayList aeN;
         try {
             for (int a : prmt.A) {
                 for (int k : prmt.K) {
-                    y_ak.put(new AK(a, k), cplex.boolVar(String.format("y(%d,%d)", a, k)));
+                    ak = new AK(a, k);
+                    y_ak.put(ak, cplex.boolVar(String.format("y(%s)", ak.get_label())));
                 }
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     for (int k : prmt.K) {
-                        z_aek.put(new AEK(a, e, k), cplex.boolVar(String.format("z(%d,%d,%d)", a, e, k)));
+                        aek = new AEK(a, e, k);
+                        z_aek.put(aek, cplex.boolVar(String.format("z(%s)", aek.get_label())));
                     }
                     aeN = prmt.N_ae.get(new AE(a, e));
-                    for (String i: aeN) {
-                        for (String j: aeN) {
-                            x_aeij.put(new AEIJ(a, e, i, j), cplex.boolVar(String.format("x(%d,%d,%s,%s)", a, e, i, j)));
+                    for (Object i: aeN) {
+                        for (Object j: aeN) {
+                            aeij = new AEIJ(a, e, i, j);
+                            x_aeij.put(aeij, cplex.boolVar(String.format("x(%s)", aeij.get_label())));
                         }
-                        mu_aei.put(new AEI(a, e, i), cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%d,%d,%s)", a, e, i)));
+                        aei = new AEI(a, e, i);
+                        mu_aei.put(aei, cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%s)", aei.get_label())));
                     }
                 }
             }
@@ -45,7 +53,7 @@ public class ModelBuilder {
     static void def_TAA_cnsts(Parameter prmt, IloCplex cplex,
                               HashMap<AK, IloNumVar> y_ak,
                               HashMap<AEK, IloNumVar> z_aek) {
-        ArrayList<Integer> aE;
+        ArrayList aE;
         IloNumVar y, z;
         IloLinearNumExpr cnst;
         AK ak;
@@ -86,10 +94,10 @@ public class ModelBuilder {
                     ak = new AK(a, k);
                     y = y_ak.get(ak);
                     aE = prmt.E_a.get(a);
-                    for (int e : aE) {
+                    for (Object e : aE) {
                         aek = new AEK(a, e, k);
                         z = z_aek.get(aek);
-                        cplex.addLe(z, y, String.format("TC(%d,%d,%d)", a, e, k));
+                        cplex.addLe(z, y, String.format("TC(%s)", aek.get_label()));
                     }
                 }
             }
@@ -102,14 +110,14 @@ public class ModelBuilder {
                                   HashMap<AEIJ, IloNumVar> x_aeij,
                                   HashMap<AEI, IloNumVar> mu_aei) {
 
-        ArrayList<Integer> aE;
+        ArrayList aE;
         // Routing (Q2)
         try {
             for (int a : prmt.A) {
                 aE = prmt.E_a.get(a);
-                for (int e : aE) {
-                    def_FC_cnsts_aeGiven(prmt, a, e, cplex, x_aeij);
-                    def_AT_cnsts_aeGiven(prmt, a, e, cplex, x_aeij, mu_aei);
+                for (Object e : aE) {
+                    def_FC_cnsts_aeGiven(prmt, a, (Integer) e, cplex, x_aeij);
+                    def_AT_cnsts_aeGiven(prmt, a, (Integer) e, cplex, x_aeij, mu_aei);
                 }
             }
         } catch (Exception ex) {
@@ -122,104 +130,110 @@ public class ModelBuilder {
                                             HashMap<AEIJ, IloNumVar> x_aeij) {
         IloNumVar x;
         IloLinearNumExpr cnst;
+        AEK aek;
+        AEI aei;
         AEIJ aeij;
         //
         AE ae = new AE(a, e);
-        ArrayList<String> aeS = prmt.S_ae.get(ae);
-        ArrayList<String> aeN = prmt.N_ae.get(ae);
-        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
-        ArrayList<Integer> ae_iF = prmt.iF_ae.get(ae);
+        ArrayList aeS = prmt.S_ae.get(ae);
+        ArrayList aeN = prmt.N_ae.get(ae);
+        ArrayList aeF = prmt.F_ae.get(ae);
+        ArrayList ae_iF = prmt.iF_ae.get(ae);
         String o_ae = String.format("s0_%d_%d", a, e);
         String d_ae = String.format("s%d_%d_%d", aeS.size() - 1, a, e);
         // Flow conservation given agent k and routine route r
         try {
             // Initiate flow
             cnst = cplex.linearNumExpr();
-            for (String j: aeN) {
+            for (Object j: aeN) {
                 aeij = new AEIJ(a, e, o_ae, j);
                 x = x_aeij.get(aeij);
                 cnst.addTerm(1, x);
             }
-            cplex.addEq(cnst, 1, String.format("iFO(%d,%d)", a, e));
+            cplex.addEq(cnst, 1, String.format("iFO(%s)", ae.get_label()));
             cnst = cplex.linearNumExpr();
-            for (String j: aeN) {
+            for (Object j: aeN) {
                 aeij = new AEIJ(a, e, j, d_ae);
                 x = x_aeij.get(aeij);
                 cnst.addTerm(1, x);
             }
-            cplex.addEq(cnst, 1, String.format("iFD(%d,%d)", a, e));
-            for (String i: aeS) {
+            cplex.addEq(cnst, 1, String.format("iFD(%s)", ae.get_label()));
+            for (Object i: aeS) {
                 if (i.equals(o_ae) || i.equals(d_ae)) continue;
+                aei = new AEI(a, e, i);
                 cnst = cplex.linearNumExpr();
-                for (String j: aeN) {
+                for (Object j: aeN) {
                     if (j.equals(i)) continue;
                     aeij = new AEIJ(a, e, i, j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                cplex.addEq(cnst, 1, String.format("iFS1(%d,%d,%s)", a, e, i));
+                cplex.addEq(cnst, 1, String.format("iFS1(%s)", aei.get_label()));
                 cnst = cplex.linearNumExpr();
-                for (String j: aeN) {
+                for (Object j: aeN) {
                     if (j.equals(i)) continue;
                     aeij = new AEIJ(a, e, j, i);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                cplex.addEq(cnst, 1, String.format("iFS2(%d,%d,%s)", a, e, i));
+                cplex.addEq(cnst, 1, String.format("iFS2(%s)", aei.get_label()));
             }
             // No flow
             cnst = cplex.linearNumExpr();
-            for (String j: aeN) {
+            for (Object j: aeN) {
                 aeij = new AEIJ(a, e, j, o_ae);
                 x = x_aeij.get(aeij);
                 cnst.addTerm(1, x);
             }
-            cplex.addEq(cnst, 0, String.format("xFO(%d,%d)", a, e));
+            cplex.addEq(cnst, 0, String.format("xFO(%s)", ae.get_label()));
             cnst = cplex.linearNumExpr();
-            for (String j: aeN) {
+            for (Object j: aeN) {
                 aeij = new AEIJ(a, e, d_ae, j);
                 x = x_aeij.get(aeij);
                 cnst.addTerm(1, x);
             }
-            cplex.addEq(cnst, 0, String.format("xFD(%d,%d)", a, e));
-            for (int k: ae_iF) {
+            cplex.addEq(cnst, 0, String.format("xFD(%s)", ae.get_label()));
+            for (Object k: ae_iF) {
+                aek = new AEK(a, e, k);
                 cnst = cplex.linearNumExpr();
-                for (String j: aeN) {
-                    aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
+                for (Object j: aeN) {
+                    aeij = new AEIJ(a, e, prmt.n_k.get((Integer) k), j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                cplex.addEq(cnst, 0, String.format("xFN(%d,%d,%d)", a, e, k));
+                cplex.addEq(cnst, 0, String.format("xFN(%s)", aek.get_label()));
             }
             // Flow about delivery nodes; only when the warehouse visited
-            for (int k: aeF) {
+            for (Object k: aeF) {
+                aek = new AEK(a, e, k);
                 cnst = cplex.linearNumExpr();
-                for (String j: aeN) {
-                    aeij = new AEIJ(a, e, prmt.n_k.get(k), j);
+                for (Object j: aeN) {
+                    aeij = new AEIJ(a, e, prmt.n_k.get((Integer) k), j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                for (String j: aeN) {
-                    aeij = new AEIJ(a, e, j, prmt.h_k.get(k));
+                for (Object j: aeN) {
+                    aeij = new AEIJ(a, e, j, prmt.h_k.get((Integer) k));
                     x = x_aeij.get(aeij);
                     cnst.addTerm(-1, x);
                 }
-                cplex.addLe(cnst, 0, String.format("tFC(%d,%d,%d)", a, e, k));
+                cplex.addLe(cnst, 0, String.format("tFC(%s)", aek.get_label()));
             }
             // Flow conservation
             for (String i: prmt.N) {
+                aei = new AEI(a, e, i);
                 cnst = cplex.linearNumExpr();
-                for (String j: aeN) {
+                for (Object j: aeN) {
                     aeij = new AEIJ(a, e, i, j);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(1, x);
                 }
-                for (String j: aeN) {
+                for (Object j: aeN) {
                     aeij = new AEIJ(a, e, j, i);
                     x = x_aeij.get(aeij);
                     cnst.addTerm(-1, x);
                 }
-                cplex.addEq(cnst, 0, String.format("FC(%d,%d,%s)", a, e, i));
+                cplex.addEq(cnst, 0, String.format("FC(%s)", aei.get_label()));
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -230,44 +244,46 @@ public class ModelBuilder {
                                             IloCplex cplex,
                                             HashMap<AEIJ, IloNumVar> x_aeij,
                                             HashMap<AEI, IloNumVar> mu_aei) {
-        IloNumVar x, mu;
-        IloLinearNumExpr cnst;
         IJ ij;
+        AEK aek;
         AEI aei;
         AEIJ aeij;
+        IloNumVar x, mu;
+        IloLinearNumExpr cnst;
         //
         AE ae = new AE(a, e);
-        ArrayList<String> aeS = prmt.S_ae.get(ae);
-        ArrayList<String> aeN = prmt.N_ae.get(ae);
-        ArrayList<Integer> aeF = prmt.F_ae.get(ae);
+        ArrayList aeS = prmt.S_ae.get(ae);
+        ArrayList aeN = prmt.N_ae.get(ae);
+        ArrayList aeF = prmt.F_ae.get(ae);
         // Arrival time calculation
         try {
             // Time Window
-            for (String i: aeN) {
+            for (Object i: aeN) {
                 aei = new AEI(a, e, i);
                 mu = mu_aei.get(aei);
-                cplex.addLe(prmt.al_i.get(i), mu, String.format("TW_L(%d,%d,%s)", a, e, i));
-                cplex.addLe(mu, prmt.be_i.get(i), String.format("TW_U(%d,%d,%s)", a, e, i));
+                cplex.addLe(prmt.al_i.get(i), mu, String.format("TW_L(%s)", aei.get_label()));
+                cplex.addLe(mu, prmt.be_i.get(i), String.format("TW_U(%s)", aei.get_label()));
             }
             // Warehouse and Delivery Sequence
-            for (int k: aeF) {
-                cplex.addLe(mu_aei.get(new AEI(a, e, prmt.h_k.get(k))),
-                        mu_aei.get(new AEI(a, e, prmt.n_k.get(k))),
-                        String.format("WD_S(%d,%d,%d)", a, e, k));
+            for (Object k: aeF) {
+                aek = new AEK(a, e, k);
+                cplex.addLe(mu_aei.get(new AEI(a, e, prmt.h_k.get((Integer) k))),
+                        mu_aei.get(new AEI(a, e, prmt.n_k.get((Integer) k))),
+                        String.format("WD_S(%s)", aek.get_label()));
             }
             // Routine route preservation
-            for (String i: aeS) {
-                for (String j: aeS) {
+            for (Object i: aeS) {
+                for (Object j: aeS) {
                     aeij = new AEIJ(a, e, i, j);
                     cnst = cplex.linearNumExpr();
                     cnst.addTerm(prmt.c_aeij.get(aeij), mu_aei.get(new AEI(a, e, i)));
                     cnst.addTerm(-1, mu_aei.get(new AEI(a, e, j)));
-                    cplex.addLe(cnst, 0, String.format("RR_P(%d,%d,%s,%s)", a, e, i, j));
+                    cplex.addLe(cnst, 0, String.format("RR_P(%s)", aeij.get_label()));
                 }
             }
             // Arrival time calculation
-            for (String i: aeN) {
-                for (String j: aeN) {
+            for (Object i: aeN) {
+                for (Object j: aeN) {
                     ij = new IJ(i, j);
                     aeij = new AEIJ(a, e, i, j);
                     cnst = cplex.linearNumExpr();
@@ -276,20 +292,20 @@ public class ModelBuilder {
                     cnst.addTerm(-1, mu_aei.get(new AEI(a, e, j)));
                     cplex.addLe(cnst,
                             prmt.M - prmt.ga_i.get(i) - prmt.t_ij.get(ij),
-                            String.format("AT(%d,%d,%s,%s)", a, e, i, j));
+                            String.format("AT(%s)", aeij.get_label()));
                 }
             }
             // Detour Limit
             cnst = cplex.linearNumExpr();
-            for (String i: aeN) {
-                for (String j: aeN) {
+            for (Object i: aeN) {
+                for (Object j: aeN) {
                     x = x_aeij.get(new AEIJ(a, e, i, j));
                     ij = new IJ(i,j);
                     cnst.addTerm(prmt.t_ij.get(ij), x);
                 }
             }
             cplex.addLe(cnst, prmt.l_ae.get(ae) + prmt.u_ae.get(ae),
-                        String.format("DL(%d,%d)", a, e));
+                        String.format("DL(%s)", ae.get_label()));
         } catch (Exception ex) {
             ex.printStackTrace();
         }

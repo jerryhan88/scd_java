@@ -9,13 +9,13 @@ import java.util.ArrayList;
 import java.util.concurrent.RecursiveTask;
 
 public class Routing_PL_worker extends RecursiveTask<Double> {
-    SGM sgm;
+    private SGM sgm;
     //
-    ArrayList<RoutingProbSol> subprobsols;
+    private ArrayList<RoutingProbSol> subprobsols;
     //
     private static final int UTILIZED_NUM_PROCESSORS = Runtime.getRuntime().availableProcessors() - 1;
-    boolean forkOrNot;
-    int wid;
+    private boolean forkOrNot;
+    private int wid;
     //
 
 
@@ -54,13 +54,13 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
             }
             int target_wid;
             int numTasks = 0;
-            ArrayList<Integer> aE;
+            ArrayList aE;
             for (int a : sgm.prmt.A) {
                 aE = sgm.prmt.E_a.get(a);
-                for (int e : aE) {
+                for (Object e : aE) {
                     target_wid = numTasks % UTILIZED_NUM_PROCESSORS;
-                    dividedTasks[target_wid].add(new RoutingProbSol(sgm.prmt, sgm._lm_aek,
-                                                                    a, e));
+                    dividedTasks[target_wid].add(new RoutingProbSol(sgm.prmt, sgm.lm_aek,
+                                                                    a, (Integer) e));
                     numTasks += 1;
                 }
             }
@@ -72,15 +72,15 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
                 workers[i] = worker;
                 worker.fork();
             }
-            for (int i = 0; i < workers.length; i++) {
-                worker = workers[i];
+            for (Routing_PL_worker worker1 : workers) {
+                worker = worker1;
                 totalVal += worker.join();
                 //
-                for (RoutingProbSol rProbSol: worker.subprobsols) {
-                    for (AEIJ key: rProbSol.x_aeij.keySet()) {
+                for (RoutingProbSol rProbSol : worker.subprobsols) {
+                    for (AEIJ key : rProbSol.x_aeij.keySet()) {
                         sgm.x_aeij.put(key, rProbSol.x_aeij.get(key));
                     }
-                    for (AEI key: rProbSol.mu_aei.keySet()) {
+                    for (AEI key : rProbSol.mu_aei.keySet()) {
                         sgm.mu_aei.put(key, rProbSol.mu_aei.get(key));
                     }
                 }

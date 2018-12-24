@@ -1,4 +1,4 @@
-package Approach.BranchAndBound;
+package Approach.Router.BranchAndBound;
 
 import Index.IJ;
 
@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 class NodeBnB {
-    private TreeBnB tree;
+    private TreeBNB tree;
     private NodeBnB pn;  // Parent node
     //
     private HashSet<String> Hn;  // Visited warehouses
@@ -15,7 +15,7 @@ class NodeBnB {
     private ArrayList<Integer> KnM;  // Set of candidate tasks
     ArrayList<String> Sn;  // Partial sequence
     private int seqIndex4Search, n_tk;
-    double currentVolume, currentWeight;
+    private double currentVolume, currentWeight;
     //
     double lowerBound = -Double.MAX_VALUE;
     double upperBound;
@@ -23,7 +23,7 @@ class NodeBnB {
     //
     private HashMap<Integer, ArrayList> KnM_Sn;
     //
-    NodeBnB(TreeBnB _tree,
+    NodeBnB(TreeBNB _tree,
             ArrayList<Integer> _KnM,
             ArrayList<String> _Sn) {
         tree = _tree;

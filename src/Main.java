@@ -53,31 +53,18 @@ public class Main {
                         sol_dpath.resolve(String.format("sol_%s_%s.csv", prefix, appName)),
                         sol_dpath.resolve(String.format("sol_%s_%s.txt", prefix, appName)));
                 etc.setLogPath(sol_dpath.resolve(String.format("log_%s_%s.log", prefix, appName)));
+                etc.setTimeLimit(timeLimit);
                 app = new ILP(prmt, etc);
             } else {
-                int TERMINATION_NUM_ITERS = Integer.parseInt(properties.getProperty("TERMINATION_NUM_ITERS"));
                 double TERMINATION_DUEL_GAP = Double.parseDouble(properties.getProperty("TERMINATION_DUEL_GAP"));
                 int NO_IMPROVEMENT_LIMIT =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT"));
                 double STEP_DECREASE_RATE = Double.parseDouble(properties.getProperty("STEP_DECREASE_RATE"));
-                double COMPENSATION_LIMIT = -1.0;
-                double COMPENSATION_RATE = -1.0;
-                String modiAppName = String.format("%s-tni%03d-tdg%03d-nil%03d-sdr%03d",
+                String modiAppName = String.format("%s-tdg%03d-nil%03d-sdr%03d",
                                                     appName,
-                                                    TERMINATION_NUM_ITERS,
                                                     (int) (TERMINATION_DUEL_GAP * 100),
                                                     NO_IMPROVEMENT_LIMIT,
                                                     (int) (STEP_DECREASE_RATE * 100)
                                                   );
-                int compensationMode = Integer.parseInt(properties.getProperty("compensationMode"));
-                if (compensationMode != 0) {
-                    COMPENSATION_LIMIT = Double.parseDouble(properties.getProperty("COMPENSATION_LIMIT"));
-                    COMPENSATION_RATE = Double.parseDouble(properties.getProperty("COMPENSATION_RATE"));
-                    modiAppName = String.format("%s-cl%03d-cr%03d",
-                            modiAppName,
-                            (int) (COMPENSATION_LIMIT * 100),
-                            (int) (COMPENSATION_RATE * 100)
-                    );
-                }
                 Etc etc = new Etc(
                         sol_dpath.resolve(String.format("sol_%s_%s.json", prefix, modiAppName)),
                         sol_dpath.resolve(String.format("sol_%s_%s.ser", prefix, modiAppName)),
@@ -90,14 +77,7 @@ public class Main {
                 app = new SGM(prmt, etc);
                 String router = appName.split("n")[1];
                 ((SGM) app).set_router(router);
-                if (compensationMode == 0) {
-                    ((SGM) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
-                            NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE);
-                } else {
-                    ((SGM) app).set_parameters(TERMINATION_NUM_ITERS,  TERMINATION_DUEL_GAP,
-                            NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE,
-                            COMPENSATION_LIMIT, COMPENSATION_RATE);
-                }
+                ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE);
             }
             app.run();
             System.out.println(String.format("Finished! %s %s", appName, file.toString()));

@@ -39,6 +39,7 @@ public class SGM extends ApproachSupClass {
     //
     private int NO_IMPROVEMENT_LIMIT;
     private double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
+    private double STEP_SIZE_LIMIT = 1e-4;
     private int NUM_LAMBDA = 0;
     //
     public SGM(Parameter prmt, Etc etc) {
@@ -181,6 +182,7 @@ public class SGM extends ApproachSupClass {
             System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
                     numIters, bestSol.dualG, etc.getCpuTime(), etc.getWallTime()));
             if (dualG <= TERMINATION_DUEL_GAP) break;
+            if (at <= STEP_SIZE_LIMIT) break;
             numIters += 1;
         }
         //

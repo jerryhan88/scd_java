@@ -8,8 +8,10 @@ import Index.*;
 import Other.Etc;
 import Other.Parameter;
 import Other.Solution;
+import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
+import ilog.concert.IloRange;
 import ilog.cplex.IloCplex;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -50,24 +52,96 @@ public class SGM extends ApproachSupClass {
         mu_aei = new HashMap<>();
         lm_aek = new HashMap<>();
         //
-        double INIT_LAMBDA_MULIPLYER = 2.0;
         at = 0.0;
         ut = 2.0;
         L_lm_star = Double.MAX_VALUE;
         F_star = -Double.MAX_VALUE;
         numIters = 0;
         noUpdateCounter = 0;
+    }
+
+    private void init_lm_fixValue(double init_lm_multiplier) {
         ArrayList aE;
         for (int a : this.prmt.A) {
             aE = this.prmt.E_a.get(a);
             for (Object e : aE) {
                 for (int k : this.prmt.K) {
                     //
-                    lm_aek.put(new AEK(a, e, k), this.prmt.r_k.get(k) * INIT_LAMBDA_MULIPLYER);
+                    lm_aek.put(new AEK(a, e, k), this.prmt.r_k.get(k) * init_lm_multiplier);
                     NUM_LAMBDA += 1;
                 }
             }
         }
+    }
+
+    private void init_lm_dualValue() {
+        try {
+            double r, p;
+            ArrayList aE;
+            IloNumVar y, z;
+            IloLinearNumExpr obj;
+            AK ak;
+            AE ae;
+            AEK aek;
+            cplex = new IloCplex();
+            //
+            HashMap<AK, IloNumVar> y_ak = new HashMap<>();
+            HashMap<AEK, IloNumVar> z_aek = new HashMap<>();
+            HashMap<AEIJ, IloNumVar> x_aeij = new HashMap<>();
+            HashMap<AEI, IloNumVar> mu_aei = new HashMap<>();
+            //
+            ModelBuilder.def_dvs_yzxm_LR(prmt, cplex, y_ak, z_aek, x_aeij, mu_aei);
+            //
+            obj = cplex.linearNumExpr();
+            for (int k : prmt.K) {
+                for (int a : prmt.A) {
+                    ak = new AK(a, k);
+                    r = prmt.r_k.get(k);
+                    y = y_ak.get(ak);
+                    obj.addTerm(r, y);
+                    aE = prmt.E_a.get(a);
+                    for (Object e : aE) {
+                        ae = new AE(a, e);
+                        aek = new AEK(a, e, k);
+                        p = prmt.p_ae.get(ae);
+                        z = z_aek.get(aek);
+                        obj.addTerm(-(r * p), z);
+                    }
+                }
+            }
+            cplex.addMaximize(obj);
+            //
+            HashMap<String, IloRange> complicating_constraints;
+            ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
+            ModelBuilder.def_Routing_cnsts(prmt, cplex, x_aeij, mu_aei); //Q2
+            complicating_constraints = ModelBuilder.def_complicating_cnsts(prmt, cplex, y_ak, z_aek, x_aeij);  // Q3
+            //
+            cplex.setOut(null);
+            cplex.solve();
+            //
+            String cnst_lable;
+            double lm;
+            for (int a : this.prmt.A) {
+                aE = this.prmt.E_a.get(a);
+                for (Object e : aE) {
+                    for (int k : this.prmt.K) {
+                        aek = new AEK(a, e, k);
+                        cnst_lable = String.format("CC(%s)", aek.get_label());
+                        //
+                        lm = cplex.getDual(complicating_constraints.get(cnst_lable));
+                        if (lm > 0.0) {
+                            lm_aek.put(aek, lm);
+                        } else {
+                            lm_aek.put(aek, 0.0);
+                        }
+                        NUM_LAMBDA += 1;
+                    }
+                }
+            }
+        } catch (IloException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void set_router(String router) {
@@ -88,6 +162,15 @@ public class SGM extends ApproachSupClass {
         this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
         this.NO_IMPROVEMENT_LIMIT = NO_IMPROVEMENT_LIMIT;
         this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
+    }
+
+    public void init_lambda(String lambda_initialization) {
+        if (lambda_initialization.equals("DV")) {
+            init_lm_dualValue();
+        } else {
+            double init_lm_multiplier = Double.parseDouble(lambda_initialization);
+            init_lm_fixValue(init_lm_multiplier);
+        }
     }
 
     private void logging(String funcName,
@@ -116,7 +199,6 @@ public class SGM extends ApproachSupClass {
             e.printStackTrace();
         }
     }
-
 
     private void lmLogging(String[] row) {
         try {
@@ -191,6 +273,7 @@ public class SGM extends ApproachSupClass {
 //        bestSol.saveSolJSN(etc.solPathJSN);
 //        bestSol.saveSolSER(etc.solPathSER);
     }
+
     private void solveDuals() {
         L1V = 0.0;
         L2V = 0.0;

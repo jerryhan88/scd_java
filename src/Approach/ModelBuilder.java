@@ -4,6 +4,7 @@ import Index.*;
 import Other.Parameter;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
+import ilog.concert.IloRange;
 import ilog.cplex.IloCplex;
 
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.HashMap;
 
 public class ModelBuilder {
 
-    static void def_dvs_yzax(Parameter prmt, IloCplex cplex,
+    static void def_dvs_yzxm(Parameter prmt, IloCplex cplex,
                              HashMap<AK, IloNumVar> y_ak,
                              HashMap<AEK, IloNumVar> z_aek,
                              HashMap<AEIJ, IloNumVar> x_aeij,
@@ -39,6 +40,46 @@ public class ModelBuilder {
                         for (Object j: aeN) {
                             aeij = new AEIJ(a, e, i, j);
                             x_aeij.put(aeij, cplex.boolVar(String.format("x(%s)", aeij.get_label())));
+                        }
+                        aei = new AEI(a, e, i);
+                        mu_aei.put(aei, cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%s)", aei.get_label())));
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    static void def_dvs_yzxm_LR(Parameter prmt, IloCplex cplex,
+                             HashMap<AK, IloNumVar> y_ak,
+                             HashMap<AEK, IloNumVar> z_aek,
+                             HashMap<AEIJ, IloNumVar> x_aeij,
+                             HashMap<AEI, IloNumVar> mu_aei){
+        AK ak;
+        AEK aek;
+        AEIJ aeij;
+        AEI aei;
+        ArrayList aE;
+        ArrayList aeN;
+        try {
+            for (int a : prmt.A) {
+                for (int k : prmt.K) {
+                    ak = new AK(a, k);
+                    y_ak.put(ak, cplex.numVar(0.0, 1.0, String.format("y(%s)", ak.get_label())));
+                }
+                aE = prmt.E_a.get(a);
+                for (Object e : aE) {
+                    for (int k : prmt.K) {
+                        aek = new AEK(a, e, k);
+                        z_aek.put(aek, cplex.numVar(0.0, 1.0, String.format("z(%s)", aek.get_label())));
+                    }
+                    aeN = prmt.N_ae.get(new AE(a, e));
+                    for (Object i: aeN) {
+                        for (Object j: aeN) {
+                            aeij = new AEIJ(a, e, i, j);
+                            x_aeij.put(aeij, cplex.numVar(0.0, 1.0, String.format("x(%s)", aeij.get_label())));
+
                         }
                         aei = new AEI(a, e, i);
                         mu_aei.put(aei, cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%s)", aei.get_label())));
@@ -309,5 +350,50 @@ public class ModelBuilder {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+
+    static HashMap<String, IloRange> def_complicating_cnsts(Parameter prmt, IloCplex cplex,
+                                                            HashMap<AK, IloNumVar> y_ak,
+                                                            HashMap<AEK, IloNumVar> z_aek,
+                                                            HashMap<AEIJ, IloNumVar> x_aeij) {
+        ArrayList aE;
+        ArrayList aeN;
+        IloNumVar y, z, x;
+        IloLinearNumExpr cnst;
+        AK ak;
+        AE ae;
+        AEK aek;
+        AEIJ aeij;
+        String cnst_lable;
+        // Complicated and Combined constraints Q3
+        HashMap<String, IloRange> constraints = new HashMap<>();
+        try {
+            for (int a : prmt.A) {
+                aE = prmt.E_a.get(a);
+                for (Object e : aE) {
+                    ae = new AE(a, e);
+                    aeN = prmt.N_ae.get(ae);
+                    for (int k: prmt.K) {
+                        ak = new AK(a, k);
+                        aek = new AEK(a, e, k);
+                        cnst = cplex.linearNumExpr();
+                        y = y_ak.get(ak);
+                        cnst.addTerm(1, y);
+                        for (Object j: aeN) {
+                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                            x = x_aeij.get(aeij);
+                            cnst.addTerm(-1, x);
+                        }
+                        z = z_aek.get(aek);
+                        cnst_lable = String.format("CC(%s)", aek.get_label());
+                        constraints.put(cnst_lable, (IloRange) cplex.addLe(cnst, z, cnst_lable));
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return constraints;
     }
 }

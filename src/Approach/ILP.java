@@ -107,16 +107,14 @@ public class ILP extends ApproachSupClass {
         try {
             double r, p;
             ArrayList aE;
-            ArrayList aeN;
-            IloNumVar y, z, x;
-            IloLinearNumExpr obj, cnst;
+            IloNumVar y, z;
+            IloLinearNumExpr obj;
             AK ak;
             AE ae;
             AEK aek;
-            AEIJ aeij;
             //
             cplex = new IloCplex();
-            ModelBuilder.def_dvs_yzax(prmt, cplex, y_ak, z_aek, x_aeij, mu_aei);
+            ModelBuilder.def_dvs_yzxm(prmt, cplex, y_ak, z_aek, x_aeij, mu_aei);
             //
             obj = cplex.linearNumExpr();
             for (int k : prmt.K) {
@@ -139,28 +137,7 @@ public class ILP extends ApproachSupClass {
             //
             ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
             ModelBuilder.def_Routing_cnsts(prmt, cplex, x_aeij, mu_aei); //Q2
-            // Complicated and Combined constraints Q3
-            for (int a : prmt.A) {
-                aE = prmt.E_a.get(a);
-                for (Object e : aE) {
-                    ae = new AE(a, e);
-                    aeN = prmt.N_ae.get(ae);
-                    for (int k: prmt.K) {
-                        ak = new AK(a, k);
-                        aek = new AEK(a, e, k);
-                        cnst = cplex.linearNumExpr();
-                        y = y_ak.get(ak);
-                        cnst.addTerm(1, y);
-                        for (Object j: aeN) {
-                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
-                            x = x_aeij.get(aeij);
-                            cnst.addTerm(-1, x);
-                        }
-                        z = z_aek.get(aek);
-                        cplex.addLe(cnst, z, String.format("CC(%s)", aek.get_label()));
-                    }
-                }
-            }
+            ModelBuilder.def_complicating_cnsts(prmt, cplex, y_ak, z_aek, x_aeij);  // Q3
         } catch (Exception ex) {
             ex.printStackTrace();
         }

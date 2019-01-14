@@ -28,7 +28,7 @@ public class SGM extends ApproachSupClass {
     //
     private IloCplex cplex;
     //
-    private int numIters, noUpdateCounter;
+    private int numIters, noUpdateCounter_L, noUpdateCounter_F;
     private double at, ut, L_lm_star, F_star, F1;
     private double L_lm1;
     private double L1V, L2V;
@@ -39,7 +39,7 @@ public class SGM extends ApproachSupClass {
     HashMap<AEI, Double> mu_aei;
     HashMap<AEK, Double> lm_aek;
     //
-    private int NO_IMPROVEMENT_LIMIT;
+    private int NO_IMPROVEMENT_LIMIT_L, NO_IMPROVEMENT_LIMIT_F;
     private double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
     private double STEP_SIZE_LIMIT = 1e-4;
     private int NUM_LAMBDA = 0;
@@ -57,7 +57,8 @@ public class SGM extends ApproachSupClass {
         L_lm_star = Double.MAX_VALUE;
         F_star = -Double.MAX_VALUE;
         numIters = 0;
-        noUpdateCounter = 0;
+        noUpdateCounter_L = 0;
+        noUpdateCounter_F = 0;
     }
 
     private void init_lm_fixValue(double init_lm_multiplier) {
@@ -158,10 +159,19 @@ public class SGM extends ApproachSupClass {
         }
     }
 
-    public void set_parameters(double TERMINATION_DUEL_GAP, int NO_IMPROVEMENT_LIMIT, double STEP_DECREASE_RATE) {
+    public void set_parameters(double TERMINATION_DUEL_GAP, double STEP_DECREASE_RATE,
+                               int NO_IMPROVEMENT_LIMIT) {
         this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
-        this.NO_IMPROVEMENT_LIMIT = NO_IMPROVEMENT_LIMIT;
         this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
+        this.NO_IMPROVEMENT_LIMIT_L = NO_IMPROVEMENT_LIMIT;
+    }
+
+    public void set_parameters(double TERMINATION_DUEL_GAP, double STEP_DECREASE_RATE,
+                               int NO_IMPROVEMENT_LIMIT_L, int NO_IMPROVEMENT_LIMIT_F) {
+        this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
+        this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
+        this.NO_IMPROVEMENT_LIMIT_L = NO_IMPROVEMENT_LIMIT_L;
+        this.NO_IMPROVEMENT_LIMIT_F = NO_IMPROVEMENT_LIMIT_F;
     }
 
     public void init_lambda(String lambda_initialization) {
@@ -265,6 +275,8 @@ public class SGM extends ApproachSupClass {
                     numIters, bestSol.dualG, etc.getCpuTime(), etc.getWallTime()));
             if (dualG <= TERMINATION_DUEL_GAP) break;
             if (at <= STEP_SIZE_LIMIT) break;
+            if (noUpdateCounter_F > NO_IMPROVEMENT_LIMIT_F) break;
+
             numIters += 1;
         }
         //
@@ -456,6 +468,7 @@ public class SGM extends ApproachSupClass {
                 F1 = cplex.getObjValue();
                 if (F1 > F_star) {
                     F_star = F1;
+                    noUpdateCounter_F = 0;
                     //
                     bestSol = new Solution();
                     bestSol.prmt = prmt;
@@ -473,6 +486,8 @@ public class SGM extends ApproachSupClass {
                     }
                     bestSol.mu_aei = new HashMap<>(mu_aei);
                     bestSol.x_aeij = new HashMap<>(x_aeij);
+                } else {
+                    noUpdateCounter_F += 1;
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -496,18 +511,18 @@ public class SGM extends ApproachSupClass {
         if (L_lm1 < L_lm_star) {
             // Better solution
             L_lm_star = L_lm1;
-            noUpdateCounter = 0;
+            noUpdateCounter_L = 0;
         } else {
             // No improvement
-            noUpdateCounter += 1;
-            if (noUpdateCounter == NO_IMPROVEMENT_LIMIT) {
+            noUpdateCounter_L += 1;
+            if (noUpdateCounter_L == NO_IMPROVEMENT_LIMIT_L) {
                 ut *= STEP_DECREASE_RATE;
-                noUpdateCounter = 0;
+                noUpdateCounter_L = 0;
             }
         }
         // Update at (Scale for the movement)
-        double denominator = ut * (L_lm_star - F_star);
-        double numerator2 = 0.0;
+        double numerator = ut * (L_lm_star - F_star);
+        double denominator2 = 0.0;
         for (int k: prmt.K) {
             for (int a: prmt.A) {
                 ak = new AK(a, k);
@@ -523,11 +538,11 @@ public class SGM extends ApproachSupClass {
                         aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
                         sumX += x_aeij.get(aeij);
                     }
-                    numerator2 += Math.pow(y - z - sumX, 2);
+                    denominator2 += Math.pow(y - z - sumX, 2);
                 }
             }
         }
-        at = denominator / numerator2;
+        at = numerator / denominator2;
     }
 
     private void UpdateLM() {

@@ -37,9 +37,12 @@ public class Main {
             ((SGM) app).set_router(router);
             //
             double TERMINATION_DUEL_GAP = Double.parseDouble(properties.getProperty("TERMINATION_DUEL_GAP"));
-            int NO_IMPROVEMENT_LIMIT =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT"));
             double STEP_DECREASE_RATE = Double.parseDouble(properties.getProperty("STEP_DECREASE_RATE"));
-            ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, NO_IMPROVEMENT_LIMIT, STEP_DECREASE_RATE);
+            int NO_IMPROVEMENT_LIMIT_L =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_L"));
+            int NO_IMPROVEMENT_LIMIT_F =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_F"));
+//            ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE, NO_IMPROVEMENT_LIMIT_L);
+            ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE,
+                                        NO_IMPROVEMENT_LIMIT_L, NO_IMPROVEMENT_LIMIT_F);
             //
             String lambda_initialization = properties.getProperty("LAMBDA_INITIALIZATION");
             ((SGM) app).init_lambda(lambda_initialization);

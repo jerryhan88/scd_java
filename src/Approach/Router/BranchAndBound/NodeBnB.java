@@ -23,13 +23,13 @@ class NodeBnB {
     //
     private HashMap<Integer, ArrayList> KnM_Sn;
     //
-    NodeBnB(TreeBNB _tree,
-            ArrayList<Integer> _KnM,
-            ArrayList<String> _Sn) {
-        tree = _tree;
+    NodeBnB(TreeBNB tree,
+            ArrayList<Integer> KnM,
+            ArrayList<String> Sn) {
+        this.tree = tree;
         KnP = new ArrayList<>();
-        KnM = _KnM;
-        Sn = _Sn;
+        this.KnM = KnM;
+        this.Sn = Sn;
         seqIndex4Search = 1;
         currentVolume = 0.0;
         currentWeight = 0.0;
@@ -125,6 +125,10 @@ class NodeBnB {
             }
         } else {
             // Insert both the warehouse and delivery nodes
+
+            // TODO
+            // Change the start index for the warehouse (from 1!!)
+
             for (int s0 = seqIndex4Search; s0 < Sn.size(); s0++) {
                 for (int s1 = s0; s1 < Sn.size(); s1++) {
                     ArrayList<String> sequence1 = new ArrayList<>(Sn);

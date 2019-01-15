@@ -29,6 +29,8 @@ public class Main {
         ApproachSupClass app;
         if (appName.equals("ILP")) {
             app = new ILP(prmt, etc);
+        } else if (appName.equals("PureGH")) {
+            app = new PureGH(prmt, etc);
         } else {
             etc.setLmLogPath(sol_dpath.resolve(String.format("LmLog_%s.csv", prefix_app)));
             //

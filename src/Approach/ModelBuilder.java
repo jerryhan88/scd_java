@@ -182,7 +182,7 @@ public class ModelBuilder {
         ArrayList ae_iF = prmt.iF_ae.get(ae);
         String o_ae = String.format("s0_%d_%d", a, e);
         String d_ae = String.format("s%d_%d_%d", aeS.size() - 1, a, e);
-        // Flow conservation given agent k and routine route r
+        // Flow conservation given agent a and routine route r
         try {
             // Initiate flow
             cnst = cplex.linearNumExpr();

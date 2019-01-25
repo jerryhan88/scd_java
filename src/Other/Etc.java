@@ -7,9 +7,13 @@ import java.util.Date;
 
 
 public class Etc {
+
     int timeLimit;
-    private Date startDate;
-    private double startCpuTime;
+    private final Date startDate;
+    private final double startCpuTime;
+    private double savedLastTimestamp;
+    public boolean trigerTermCondition = false;
+    //
     public Path logPath = null;
     public Path lmLogPath = null;
     public Path solPathJSN = null;
@@ -24,6 +28,14 @@ public class Etc {
         this.solPathSER = solPathSER;
         this.solPathCSV = solPathCSV;
         this.solPathTXT = solPathTXT;
+    }
+
+    public void saveTimestamp() {
+        savedLastTimestamp = getCpuTime();
+    }
+
+    public double getSavedTimestamp() {
+        return savedLastTimestamp;
     }
 
     public void setTimeLimit(int timeLimit) {

@@ -4,6 +4,7 @@ import Approach.Router.BranchAndBound.TreeGH;
 import Index.AEI;
 import Index.AEIJ;
 import Index.AEK;
+import Other.Etc;
 import Other.Parameter;
 import Other.RoutingProbSol;
 
@@ -17,9 +18,10 @@ public class RouterGH extends RouterSup {
         int a = rProbSol.get_aid();
         int e = rProbSol.get_eid();
         Parameter prmt = rProbSol.get_prmt();
+        Etc etc = rProbSol.get_etc();
         HashMap<AEK, Double> lm_aek = rProbSol.get_lm_aek();
         //
-        TreeGH treeGH = new TreeGH(prmt, a, e, lm_aek);
+        TreeGH treeGH = new TreeGH(prmt, etc, a, e, lm_aek);
         treeGH.solve();
         //
         rProbSol.objV = treeGH.objV;

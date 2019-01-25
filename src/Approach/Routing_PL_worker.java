@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.concurrent.RecursiveTask;
 
 public class Routing_PL_worker extends RecursiveTask<Double> {
-    private SGM sgm;
+    private LRH rlh;
     //
     private ArrayList<RoutingProbSol> subprobsols;
     //
@@ -18,17 +18,15 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
     private int wid;
     //
 
-
-
-    public Routing_PL_worker(SGM sgm) {
-        this.sgm = sgm;
+    public Routing_PL_worker(LRH rlh) {
+        this.rlh = rlh;
         //
         forkOrNot = true;
         wid = -1;
     }
 
-    public Routing_PL_worker(SGM sgm, int wid, ArrayList<RoutingProbSol> subprobsols) {
-        this.sgm = sgm;
+    public Routing_PL_worker(LRH rlh, int wid, ArrayList<RoutingProbSol> subprobsols) {
+        this.rlh = rlh;
         //
         forkOrNot = false;
         this.wid = wid;
@@ -38,7 +36,11 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
     public Double processing() {
         double totalVal = 0.0;
         for (RoutingProbSol rProbSol: subprobsols) {
-            sgm.router.solve(rProbSol);
+            rlh.router.solve(rProbSol);
+            if (rProbSol.isTerminated) {
+                rlh.isTerminated = true;
+                return -1.0;
+            }
             totalVal += rProbSol.objV;
         }
         return totalVal;
@@ -55,12 +57,13 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
             int target_wid;
             int numTasks = 0;
             ArrayList aE;
-            for (int a : sgm.prmt.A) {
-                aE = sgm.prmt.E_a.get(a);
+            for (int a : rlh.prmt.A) {
+                aE = rlh.prmt.E_a.get(a);
                 for (Object e : aE) {
                     target_wid = numTasks % UTILIZED_NUM_PROCESSORS;
-                    dividedTasks[target_wid].add(new RoutingProbSol(sgm.prmt, sgm.lm_aek,
-                                                                    a, (Integer) e));
+                    dividedTasks[target_wid].add(new RoutingProbSol(rlh.prmt, rlh.etc,
+                                                                    rlh.lm_aek,
+                                                                    a, (Integer) e, rlh.numIters));
                     numTasks += 1;
                 }
             }
@@ -68,7 +71,7 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
             Routing_PL_worker worker;
             Routing_PL_worker[] workers = new Routing_PL_worker[UTILIZED_NUM_PROCESSORS];
             for (int i = 0; i < workers.length; i++) {
-                worker = new Routing_PL_worker(sgm, i, dividedTasks[i]);
+                worker = new Routing_PL_worker(rlh, i, dividedTasks[i]);
                 workers[i] = worker;
                 worker.fork();
             }
@@ -77,11 +80,12 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
                 totalVal += worker.join();
                 //
                 for (RoutingProbSol rProbSol : worker.subprobsols) {
+                    //
                     for (AEIJ key : rProbSol.x_aeij.keySet()) {
-                        sgm.x_aeij.put(key, rProbSol.x_aeij.get(key));
+                        rlh.x_aeij.put(key, rProbSol.x_aeij.get(key));
                     }
                     for (AEI key : rProbSol.mu_aei.keySet()) {
-                        sgm.mu_aei.put(key, rProbSol.mu_aei.get(key));
+                        rlh.mu_aei.put(key, rProbSol.mu_aei.get(key));
                     }
                 }
             }

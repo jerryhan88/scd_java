@@ -174,8 +174,7 @@ public class ILP extends ApproachSupClass {
 //                sol.saveSolSER(etc.solPathSER);
             } else if (cplex.getStatus() == IloCplex.Status.InfeasibleOrUnbounded) {
                 cplex.exportModel(String.format("%s.lp", prmt.problemName));
-            }
-            else {
+            } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
             }
             cplex.end();

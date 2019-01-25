@@ -1,14 +1,15 @@
 package Approach.Router.BranchAndBound;
 
 import Index.AEK;
+import Other.Etc;
 import Other.Parameter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TreeGH extends TreeBNB {
-    public TreeGH(Parameter prmt, int a, int e, HashMap<AEK, Double> lm_aek) {
-        super(prmt, a, e, lm_aek);
+    public TreeGH(Parameter prmt, Etc etc, int a, int e, HashMap<AEK, Double> lm_aek) {
+        super(prmt, etc, a, e, lm_aek);
     }
 
     private boolean branch() {

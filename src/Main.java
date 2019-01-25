@@ -4,7 +4,6 @@ import Other.Parameter;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -32,22 +31,25 @@ public class Main {
         } else if (appName.equals("PureGH")) {
             app = new PureGH(prmt, etc);
         } else {
+            assert appName.startsWith("RLH");
+            assert appName.contains("n");
+            //
             etc.setLmLogPath(sol_dpath.resolve(String.format("LmLog_%s.csv", prefix_app)));
             //
-            app = new SGM(prmt, etc);
+            app = new LRH(prmt, etc);
             String router = appName.split("n")[1];
-            ((SGM) app).set_router(router);
+            ((LRH) app).set_router(router);
             //
             double TERMINATION_DUEL_GAP = Double.parseDouble(properties.getProperty("TERMINATION_DUEL_GAP"));
             double STEP_DECREASE_RATE = Double.parseDouble(properties.getProperty("STEP_DECREASE_RATE"));
             int NO_IMPROVEMENT_LIMIT_L =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_L"));
             int NO_IMPROVEMENT_LIMIT_F =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_F"));
-//            ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE, NO_IMPROVEMENT_LIMIT_L);
-            ((SGM) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE,
+//            ((LRH) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE, NO_IMPROVEMENT_LIMIT_L);
+            ((LRH) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE,
                                         NO_IMPROVEMENT_LIMIT_L, NO_IMPROVEMENT_LIMIT_F);
             //
             String lambda_initialization = properties.getProperty("LAMBDA_INITIALIZATION");
-            ((SGM) app).init_lambda(lambda_initialization);
+            ((LRH) app).init_lambda(lambda_initialization);
         }
         app.run();
         System.out.println(String.format("Finished! %s %s", appName, prmt_file.toString()));

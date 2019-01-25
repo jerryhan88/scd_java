@@ -23,12 +23,13 @@ import java.util.HashMap;
 import java.util.concurrent.ForkJoinPool;
 
 
-public class SGM extends ApproachSupClass {
+public class LRH extends ApproachSupClass {
     RouterSup router;
     //
     private IloCplex cplex;
     //
-    private int numIters, noUpdateCounter_L, noUpdateCounter_F;
+    int numIters;
+    private int noUpdateCounter_L, noUpdateCounter_F;
     private double at, ut, L_lm_star, F_star, F1;
     private double L_lm1;
     private double L1V, L2V;
@@ -44,7 +45,8 @@ public class SGM extends ApproachSupClass {
     private double STEP_SIZE_LIMIT = 1e-4;
     private int NUM_LAMBDA = 0;
     //
-    public SGM(Parameter prmt, Etc etc) {
+    public boolean isTerminated;
+    public LRH(Parameter prmt, Etc etc) {
         super(prmt, etc);
         y_ak = new HashMap<>();
         z_aek = new HashMap<>();
@@ -246,6 +248,11 @@ public class SGM extends ApproachSupClass {
                 " ", " ", " ", " ",
                 " ");
         while (etc.getWallTime() < etc.getTimeLimit()) {
+            if (numIters > 1) {
+                etc.trigerTermCondition = true;
+                etc.saveTimestamp();
+            }
+            //
             solveDuals();
             if (numIters == 0) {
                 logging("solveDuals",
@@ -256,34 +263,68 @@ public class SGM extends ApproachSupClass {
                         String.format("%.4f", L_lm_star), String.format("%.4f", L_lm1), " ", " ",
                         " ");
             }
-            primalExtraction();
-            logging("primalExtraction",
-                    " ", " ",
-                    String.format("%.4f", F_star), String.format("%.4f", F1),
-                    " ");
-            UpdateLM();
-            logging("UpdateLM",
-                    " ", " ", " ", " ",
-                    String.format("at: %f  ut: %f", at, ut));
-            double dualG = (L_lm_star - F_star) / F_star;
-            if (dualG < bestSol.dualG)
-                bestSol.dualG = dualG;
-            logging("IterSummary",
-                    " ", " ", " ", " ",
-                    String.format("Dual Gap: %f", bestSol.dualG));
-            System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
-                    numIters, bestSol.dualG, etc.getCpuTime(), etc.getWallTime()));
-            if (dualG <= TERMINATION_DUEL_GAP) break;
-            if (at <= STEP_SIZE_LIMIT) break;
-            if (noUpdateCounter_F > NO_IMPROVEMENT_LIMIT_F) break;
-
-            numIters += 1;
+            if (!etc.trigerTermCondition) {
+                solvePrimalNupdateLM();
+                if (checkTerminalConditions())
+                    break;
+                numIters += 1;
+            } else if (!isTerminated) {
+                solvePrimalNupdateLM();
+                if (checkTerminalConditions())
+                    break;
+                numIters += 1;
+            } else {
+                bestSol.cpuT = etc.getCpuTime();
+                bestSol.wallT = etc.getWallTime();
+                logging("Termination",
+                        " ", " ", " ", " ",
+                        "Terminated while solving routing: L2V is meaningless");
+                break;
+            }
         }
         //
         bestSol.saveSolCSV(etc.solPathCSV);
-        bestSol.saveSolTXT(etc.solPathTXT);
+//        bestSol.saveSolTXT(etc.solPathTXT);
 //        bestSol.saveSolJSN(etc.solPathJSN);
 //        bestSol.saveSolSER(etc.solPathSER);
+    }
+
+    private boolean checkTerminalConditions() {
+        double duration = bestSol.cpuT - etc.getSavedTimestamp();
+        if (bestSol.dualG <= TERMINATION_DUEL_GAP)
+            return true;
+        else if (etc.trigerTermCondition && duration > etc.getSavedTimestamp() && noUpdateCounter_F > 0)
+            return true;
+        else if (at <= STEP_SIZE_LIMIT)
+            return true;
+        else if (noUpdateCounter_F > NO_IMPROVEMENT_LIMIT_F)
+            return true;
+        else
+            return false;
+
+    }
+
+    private void solvePrimalNupdateLM() {
+        primalExtraction();
+        logging("primalExtraction",
+                " ", " ",
+                String.format("%.4f", F_star), String.format("%.4f", F1),
+                " ");
+        UpdateLM();
+        logging("UpdateLM",
+                " ", " ", " ", " ",
+                String.format("at: %f  ut: %f", at, ut));
+        bestSol.cpuT = etc.getCpuTime();
+        bestSol.wallT = etc.getWallTime();
+        double dualG = (L_lm_star - F_star) / F_star;
+        if (dualG < bestSol.dualG)
+            bestSol.dualG = dualG;
+        //
+        logging("IterSummary",
+                " ", " ", " ", " ",
+                String.format("Dual Gap: %f", bestSol.dualG));
+        System.out.println(String.format("#%d : dualG  %.4f  cpuT %f  wallT %f",
+                numIters, bestSol.dualG, etc.getCpuTime(), etc.getWallTime()));
     }
 
     private void solveDuals() {
@@ -557,7 +598,7 @@ public class SGM extends ApproachSupClass {
         // Update the step size, at, first
         update_step_size();
         // Update multipliers
-        String [] row = new String[NUM_LAMBDA];
+//        String [] row = new String[NUM_LAMBDA];
         int lmIndex = 0;
         for (int a: prmt.A) {
             aE = prmt.E_a.get(a);
@@ -580,12 +621,12 @@ public class SGM extends ApproachSupClass {
                     } else {
                         lm_aek.put(aek, lm);
                     }
-                    row[lmIndex] = String.format("%f", lm_aek.get(aek));
+//                    row[lmIndex] = String.format("%f", lm_aek.get(aek));
                     lmIndex += 1;
                 }
             }
         }
-        lmLogging(row);
+//        lmLogging(row);
     }
 
 }

@@ -1,10 +1,8 @@
 package Approach.Router;
 
 import Approach.ModelBuilder;
-import Index.AE;
-import Index.AEI;
-import Index.AEIJ;
-import Index.AEK;
+import Index.*;
+import Other.Etc;
 import Other.Parameter;
 import Other.RoutingProbSol;
 import java.util.ArrayList;
@@ -16,10 +14,30 @@ import ilog.cplex.IloCplex;
 
 public class RouterILP extends RouterSup {
 
+
+    static class TimeLimitCallback extends IloCplex.MIPInfoCallback {
+        Etc etc;
+        double timeRecorder = -1.0;
+
+        TimeLimitCallback(Etc etc) {
+            this.etc = etc;
+        }
+
+        @Override
+        protected void main() {
+            if (etc.trigerTermCondition && etc.getCpuTime() > (etc.getSavedTimestamp() * 2)) {
+                abort();
+            }
+        }
+    }
+
+
     public void solve(RoutingProbSol rProbSol) {
         int a = rProbSol.get_aid();
         int e = rProbSol.get_eid();
+        int numIter = rProbSol.get_numIter();
         Parameter prmt = rProbSol.get_prmt();
+        Etc etc = rProbSol.get_etc();
         HashMap<AEK, Double> lm_aek = rProbSol.get_lm_aek();
         //
         AE ae = new AE(a, e);
@@ -61,6 +79,12 @@ public class RouterILP extends RouterSup {
             ModelBuilder.def_AT_cnsts_aeGiven(prmt, a, e, cplex, x_aeij, mu_aei);
             //
             cplex.setOut(null);
+            cplex.use(new TimeLimitCallback(etc));
+
+            cplex.exportModel(String.format("%s_%d_%d_%d.lp", prmt.problemName, numIter, a, e));
+
+
+
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
                 rProbSol.objV = -cplex.getObjValue();
@@ -70,8 +94,11 @@ public class RouterILP extends RouterSup {
                 for (AEI key: mu_aei.keySet()) {
                     rProbSol.mu_aei.put(key, cplex.getValue(mu_aei.get(key)));
                 }
+            } else if (cplex.getStatus() == IloCplex.Status.InfeasibleOrUnbounded) {
+                cplex.exportModel(String.format("%s.lp", prmt.problemName));
             } else {
-                cplex.output().println("Other.Solution status = " + cplex.getStatus());
+                rProbSol.objV = -1;
+                rProbSol.isTerminated = true;
             }
             cplex.end();
         } catch (Exception ex) {

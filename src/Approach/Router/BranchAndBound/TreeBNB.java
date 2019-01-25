@@ -4,12 +4,14 @@ import Index.AE;
 import Index.AEIJ;
 import Index.AEI;
 import Index.AEK;
+import Other.Etc;
 import Other.Parameter;
 
 import java.util.*;
 
 public class TreeBNB {
     Parameter prmt;
+    Etc etc;
     private int a, e;
     double a_v, a_w, ae_l, ae_u;
     HashMap<Integer, Double> lm_k;
@@ -20,9 +22,13 @@ public class TreeBNB {
     //
     PriorityQueue<NodeBnB> pq;
     NodeBnB incumbent = null;
+    //
+    public boolean isTerminated;
 
-    public TreeBNB(Parameter prmt, int a, int e, HashMap<AEK, Double> lm_aek) {
+    public TreeBNB(Parameter prmt, Etc etc,
+                   int a, int e, HashMap<AEK, Double> lm_aek) {
         this.prmt = prmt;
+        this.etc = etc;
         this.a = a;
         this.e = e;
         //
@@ -60,6 +66,8 @@ public class TreeBNB {
             }
         });
         pq.add(new NodeBnB(this, KnM, Sn));
+        //
+        isTerminated = false;
     }
 
     void update_incumbent(NodeBnB tn) {
@@ -90,6 +98,9 @@ public class TreeBNB {
     public void solve() {
         while (pq.size() != 0) {
             branch();
+            if (etc.trigerTermCondition && etc.getCpuTime() > (etc.getSavedTimestamp() * 2)) {
+                break;
+            }
         }
         update_dvs();
     }

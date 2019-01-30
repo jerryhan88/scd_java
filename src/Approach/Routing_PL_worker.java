@@ -13,19 +13,21 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
     //
     private ArrayList<RoutingProbSol> subprobsols;
     //
-    private static final int UTILIZED_NUM_PROCESSORS = Runtime.getRuntime().availableProcessors() - 1;
+    private static final int UTILIZED_NUM_PROCESSORS = LRH.AVAILABLE_NUM_PROCESSORS - 1;
+//    private static final int UTILIZED_NUM_PROCESSORS = 10;
+
     private boolean forkOrNot;
     private int wid;
     //
 
-    public Routing_PL_worker(LRH rlh) {
+    Routing_PL_worker(LRH rlh) {
         this.rlh = rlh;
         //
         forkOrNot = true;
         wid = -1;
     }
 
-    public Routing_PL_worker(LRH rlh, int wid, ArrayList<RoutingProbSol> subprobsols) {
+    private Routing_PL_worker(LRH rlh, int wid, ArrayList<RoutingProbSol> subprobsols) {
         this.rlh = rlh;
         //
         forkOrNot = false;
@@ -33,14 +35,10 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
         this.subprobsols = subprobsols;
     }
 
-    public Double processing() {
+    private Double processing() {
         double totalVal = 0.0;
         for (RoutingProbSol rProbSol: subprobsols) {
             rlh.router.solve(rProbSol);
-            if (rProbSol.isTerminated) {
-                rlh.isTerminated = true;
-                return -1.0;
-            }
             totalVal += rProbSol.objV;
         }
         return totalVal;

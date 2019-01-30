@@ -1,5 +1,6 @@
-package Approach.Router.BranchAndBound;
+package Approach.Router.TreeSearch;
 
+import Approach.GH_helper;
 import Index.AE;
 import Index.AEIJ;
 import Index.AEI;
@@ -9,10 +10,10 @@ import Other.Parameter;
 
 import java.util.*;
 
-public class TreeBNB {
+public class Tree {
     Parameter prmt;
-    Etc etc;
-    private int a, e;
+    private Etc etc;
+    public int a, e;
     double a_v, a_w, ae_l, ae_u;
     HashMap<Integer, Double> lm_k;
     //
@@ -20,13 +21,13 @@ public class TreeBNB {
     public HashMap<AEIJ, Double> x_aeij;
     public HashMap<AEI, Double> mu_aei;
     //
-    PriorityQueue<NodeBnB> pq;
-    NodeBnB incumbent = null;
-    //
-    public boolean isTerminated;
+    private int lastNodeID;
+    PriorityQueue<Node> pq;
+    Node incumbent = null;
+    boolean isSearchFinished;
 
-    public TreeBNB(Parameter prmt, Etc etc,
-                   int a, int e, HashMap<AEK, Double> lm_aek) {
+    Tree(Parameter prmt, Etc etc,
+         int a, int e, HashMap<AEK, Double> lm_aek) {
         this.prmt = prmt;
         this.etc = etc;
         this.a = a;
@@ -65,44 +66,9 @@ public class TreeBNB {
                     return 0;
             }
         });
-        pq.add(new NodeBnB(this, KnM, Sn));
-        //
-        isTerminated = false;
-    }
-
-    void update_incumbent(NodeBnB tn) {
-        assert tn.lowerBound != -Double.MAX_VALUE;
-        if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
-            incumbent = tn;
-        }
-    }
-
-    private void branch() {
-        NodeBnB tn = pq.poll();
-        assert tn != null;
-        if (incumbent != null && tn.upperBound <= incumbent.lowerBound)
-            return;
-        if (tn.tLB == tn.upperBound) {
-            tn.lowerBound = tn.g();
-            update_incumbent(tn);
-        } else {
-            ArrayList<NodeBnB> children = tn.gen_children_or_calc_lowerBound();
-            if (children == null) {
-                update_incumbent(tn);
-            } else {
-                pq.addAll(children);
-            }
-        }
-    }
-
-    public void solve() {
-        while (pq.size() != 0) {
-            branch();
-            if (etc.trigerTermCondition && etc.getCpuTime() > (etc.getSavedTimestamp() * 2)) {
-                break;
-            }
-        }
-        update_dvs();
+        lastNodeID = -1;
+        pq.add(new Node(this, KnM, Sn));
+        isSearchFinished = false;
     }
 
     void update_dvs() {
@@ -122,10 +88,35 @@ public class TreeBNB {
             n1 = incumbent.Sn.get(s + 1);
             x_aeij.put(new AEIJ(a, e, n0, n1), 1.0);
         }
-        HashMap<String, Double> arrivalTime = incumbent.get_arrivalTime();
+        HashMap<String, Double> arrivalTime = GH_helper.get_arrivalTime(prmt, incumbent.Sn);
         for (String i: arrivalTime.keySet()) {
             mu_aei.put(new AEI(a, e, i), arrivalTime.get(i));
         }
+    }
+
+    synchronized int genNodeID() {
+        lastNodeID += 1;
+        return lastNodeID;
+    }
+
+    synchronized void update_incumbent(Node tn) {
+        assert tn.lowerBound != -Double.MAX_VALUE;
+        if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
+            incumbent = tn;
+        }
+    }
+
+    synchronized Node popNode() {
+        Node tn = pq.poll();
+        return tn;
+    }
+
+    synchronized void pushNodes(ArrayList<Node> nodes) {
+        pq.addAll(nodes);
+    }
+
+    public void solve() throws InterruptedException {
+        throw new RuntimeException("Should override the function!!");
     }
 }
 

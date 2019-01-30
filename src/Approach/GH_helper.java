@@ -9,8 +9,7 @@ import java.util.HashSet;
 
 public class GH_helper {
 
-
-    static ArrayList<String> get_best_sequence(Parameter prmt,
+    static public ArrayList<String> get_best_sequence(Parameter prmt,
                                                HashSet<String> visitedWH,
                                                ArrayList<String> partialSequence,
                                                int seqBeginIndex4Search,
@@ -72,7 +71,7 @@ public class GH_helper {
         return false;
     }
 
-    static double get_travelTime(Parameter prmt, ArrayList<String> sequence) {
+    static public double get_travelTime(Parameter prmt, ArrayList<String> sequence) {
         String n0, n1;
         double tt = 0.0;
         for (int i = 0; i < sequence.size() - 1; i++) {
@@ -83,7 +82,7 @@ public class GH_helper {
         return tt;
     }
 
-    static HashMap<String, Double> get_arrivalTime(Parameter prmt, ArrayList<String> sequence) {
+    static public HashMap<String, Double> get_arrivalTime(Parameter prmt, ArrayList<String> sequence) {
         String n0, n1;
         n0 = sequence.get(0);
         HashMap<String, Double> arrivalTime = new HashMap<>();

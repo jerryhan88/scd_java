@@ -31,25 +31,21 @@ public class Main {
         } else if (appName.equals("PureGH")) {
             app = new PureGH(prmt, etc);
         } else {
-            assert appName.startsWith("RLH");
+            assert appName.startsWith("LRH");
             assert appName.contains("n");
             //
             etc.setLmLogPath(sol_dpath.resolve(String.format("LmLog_%s.csv", prefix_app)));
             //
             app = new LRH(prmt, etc);
+            double LRH_DUAL_GAP = Double.parseDouble(properties.getProperty("LRH_DUAL_GAP"));
+            int LRH_NUM_ITER =Integer.parseInt(properties.getProperty("LRH_NUM_ITER"));
+            double STEP_DECREASE_RATE = Double.parseDouble(properties.getProperty("STEP_DECREASE_RATE"));
+            int NO_IMPROVEMENT_LIMIT =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT"));
+            double SUB_DUAL_GAP_LIMIT =Double.parseDouble(properties.getProperty("SUB_DUAL_GAP_LIMIT"));
+            ((LRH) app).set_parameters(LRH_DUAL_GAP, LRH_NUM_ITER,
+                    STEP_DECREASE_RATE, NO_IMPROVEMENT_LIMIT, SUB_DUAL_GAP_LIMIT);
             String router = appName.split("n")[1];
             ((LRH) app).set_router(router);
-            //
-            double TERMINATION_DUEL_GAP = Double.parseDouble(properties.getProperty("TERMINATION_DUEL_GAP"));
-            double STEP_DECREASE_RATE = Double.parseDouble(properties.getProperty("STEP_DECREASE_RATE"));
-            int NO_IMPROVEMENT_LIMIT_L =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_L"));
-            int NO_IMPROVEMENT_LIMIT_F =Integer.parseInt(properties.getProperty("NO_IMPROVEMENT_LIMIT_F"));
-//            ((LRH) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE, NO_IMPROVEMENT_LIMIT_L);
-            ((LRH) app).set_parameters(TERMINATION_DUEL_GAP, STEP_DECREASE_RATE,
-                                        NO_IMPROVEMENT_LIMIT_L, NO_IMPROVEMENT_LIMIT_F);
-            //
-            String lambda_initialization = properties.getProperty("LAMBDA_INITIALIZATION");
-            ((LRH) app).init_lambda(lambda_initialization);
         }
         app.run();
         System.out.println(String.format("Finished! %s %s", appName, prmt_file.toString()));

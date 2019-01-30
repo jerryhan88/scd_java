@@ -3,6 +3,8 @@ package Other;
 import Index.AEI;
 import Index.AEIJ;
 import Index.AEK;
+import ilog.concert.IloException;
+import ilog.concert.IloNumVar;
 
 import java.util.HashMap;
 
@@ -16,7 +18,6 @@ public class RoutingProbSol {
     public HashMap<AEIJ, Double> x_aeij;
     public HashMap<AEI, Double> mu_aei;
     //
-    public boolean isTerminated;
 
     public RoutingProbSol(Parameter prmt, Etc etc,
                           HashMap<AEK, Double> lm_aek,
@@ -30,8 +31,6 @@ public class RoutingProbSol {
         //
         x_aeij = new HashMap<>();
         mu_aei = new HashMap<>();
-        //
-        isTerminated = false;
     }
 
     public int get_aid() {
@@ -40,10 +39,6 @@ public class RoutingProbSol {
 
     public int get_eid() {
         return e;
-    }
-
-    public int get_numIter() {
-        return numIter;
     }
 
     public Parameter get_prmt() {

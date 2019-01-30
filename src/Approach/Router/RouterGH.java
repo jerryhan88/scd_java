@@ -1,6 +1,6 @@
 package Approach.Router;
 
-import Approach.Router.BranchAndBound.TreeGH;
+import Approach.Router.TreeSearch.TreeGH;
 import Index.AEI;
 import Index.AEIJ;
 import Index.AEK;

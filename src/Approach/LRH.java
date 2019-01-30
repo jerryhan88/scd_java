@@ -15,7 +15,7 @@ import ilog.concert.IloRange;
 import ilog.cplex.IloCplex;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-
+//
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,12 +24,13 @@ import java.util.concurrent.ForkJoinPool;
 
 
 public class LRH extends ApproachSupClass {
+    public static final int AVAILABLE_NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
     RouterSup router;
     //
     private IloCplex cplex;
     //
     int numIters;
-    private int noUpdateCounter_L, noUpdateCounter_F;
+    private int noUpdateCounter_L, LRH_NUM_ITER;
     private double at, ut, L_lm_star, F_star, F1;
     private double L_lm1;
     private double L1V, L2V;
@@ -40,12 +41,11 @@ public class LRH extends ApproachSupClass {
     HashMap<AEI, Double> mu_aei;
     HashMap<AEK, Double> lm_aek;
     //
-    private int NO_IMPROVEMENT_LIMIT_L, NO_IMPROVEMENT_LIMIT_F;
-    private double TERMINATION_DUEL_GAP, STEP_DECREASE_RATE;
+    private int NO_IMPROVEMENT_LIMIT;
+    private double LRH_DUAL_GAP, STEP_DECREASE_RATE, SUB_DUAL_GAP_LIMIT;
     private double STEP_SIZE_LIMIT = 1e-4;
     private int NUM_LAMBDA = 0;
     //
-    public boolean isTerminated;
     public LRH(Parameter prmt, Etc etc) {
         super(prmt, etc);
         y_ak = new HashMap<>();
@@ -60,21 +60,8 @@ public class LRH extends ApproachSupClass {
         F_star = -Double.MAX_VALUE;
         numIters = 0;
         noUpdateCounter_L = 0;
-        noUpdateCounter_F = 0;
-    }
-
-    private void init_lm_fixValue(double init_lm_multiplier) {
-        ArrayList aE;
-        for (int a : this.prmt.A) {
-            aE = this.prmt.E_a.get(a);
-            for (Object e : aE) {
-                for (int k : this.prmt.K) {
-                    //
-                    lm_aek.put(new AEK(a, e, k), this.prmt.r_k.get(k) * init_lm_multiplier);
-                    NUM_LAMBDA += 1;
-                }
-            }
-        }
+        //
+        init_lm_dualValue();
     }
 
     private void init_lm_dualValue() {
@@ -151,6 +138,7 @@ public class LRH extends ApproachSupClass {
         switch (router) {
             case "ILP":
                 this.router = new RouterILP();
+                ((RouterILP) this.router).setDualGapLimit(SUB_DUAL_GAP_LIMIT);
                 break;
             case "BNB":
                 this.router = new RouterBNB();
@@ -161,28 +149,15 @@ public class LRH extends ApproachSupClass {
         }
     }
 
-    public void set_parameters(double TERMINATION_DUEL_GAP, double STEP_DECREASE_RATE,
-                               int NO_IMPROVEMENT_LIMIT) {
-        this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
+    public void set_parameters(double LRH_DUAL_GAP, int LRH_NUM_ITER,
+                               double STEP_DECREASE_RATE,
+                               int NO_IMPROVEMENT_LIMIT, double SUB_DUAL_GAP_LIMIT) {
+        this.LRH_DUAL_GAP = LRH_DUAL_GAP;
+        this.LRH_NUM_ITER = LRH_NUM_ITER;
+        //
         this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
-        this.NO_IMPROVEMENT_LIMIT_L = NO_IMPROVEMENT_LIMIT;
-    }
-
-    public void set_parameters(double TERMINATION_DUEL_GAP, double STEP_DECREASE_RATE,
-                               int NO_IMPROVEMENT_LIMIT_L, int NO_IMPROVEMENT_LIMIT_F) {
-        this.TERMINATION_DUEL_GAP = TERMINATION_DUEL_GAP;
-        this.STEP_DECREASE_RATE = STEP_DECREASE_RATE;
-        this.NO_IMPROVEMENT_LIMIT_L = NO_IMPROVEMENT_LIMIT_L;
-        this.NO_IMPROVEMENT_LIMIT_F = NO_IMPROVEMENT_LIMIT_F;
-    }
-
-    public void init_lambda(String lambda_initialization) {
-        if (lambda_initialization.equals("DV")) {
-            init_lm_dualValue();
-        } else {
-            double init_lm_multiplier = Double.parseDouble(lambda_initialization);
-            init_lm_fixValue(init_lm_multiplier);
-        }
+        this.NO_IMPROVEMENT_LIMIT = NO_IMPROVEMENT_LIMIT;
+        this.SUB_DUAL_GAP_LIMIT = SUB_DUAL_GAP_LIMIT;
     }
 
     private void logging(String funcName,
@@ -254,33 +229,12 @@ public class LRH extends ApproachSupClass {
             }
             //
             solveDuals();
-            if (numIters == 0) {
-                logging("solveDuals",
-                        "inf", String.format("%.4f", L_lm1), " ", " ",
-                        " ");
-            } else {
-                logging("solveDuals",
-                        String.format("%.4f", L_lm_star), String.format("%.4f", L_lm1), " ", " ",
-                        " ");
-            }
-            if (!etc.trigerTermCondition) {
-                solvePrimalNupdateLM();
-                if (checkTerminalConditions())
-                    break;
-                numIters += 1;
-            } else if (!isTerminated) {
-                solvePrimalNupdateLM();
-                if (checkTerminalConditions())
-                    break;
-                numIters += 1;
-            } else {
-                bestSol.cpuT = etc.getCpuTime();
-                bestSol.wallT = etc.getWallTime();
-                logging("Termination",
-                        " ", " ", " ", " ",
-                        "Terminated while solving routing: L2V is meaningless");
+            solvePrimalNupdateLM();
+            if (checkTerminalConditions())
                 break;
-            }
+            if (numIters == LRH_NUM_ITER)
+                break;
+            numIters += 1;
         }
         //
         bestSol.saveSolCSV(etc.solPathCSV);
@@ -290,14 +244,9 @@ public class LRH extends ApproachSupClass {
     }
 
     private boolean checkTerminalConditions() {
-        double duration = bestSol.cpuT - etc.getSavedTimestamp();
-        if (bestSol.dualG <= TERMINATION_DUEL_GAP)
-            return true;
-        else if (etc.trigerTermCondition && duration > etc.getSavedTimestamp() && noUpdateCounter_F > 0)
+        if (bestSol.dualG <= LRH_DUAL_GAP)
             return true;
         else if (at <= STEP_SIZE_LIMIT)
-            return true;
-        else if (noUpdateCounter_F > NO_IMPROVEMENT_LIMIT_F)
             return true;
         else
             return false;
@@ -340,6 +289,15 @@ public class LRH extends ApproachSupClass {
                 " ", " ", " ", " ",
                 String.format("L2V: %.4f", L2V));
         L_lm1 = L1V + L2V;
+        if (numIters == 0) {
+            logging("solveDuals",
+                    "inf", String.format("%.4f", L_lm1), " ", " ",
+                    " ");
+        } else {
+            logging("solveDuals",
+                    String.format("%.4f", L_lm_star), String.format("%.4f", L_lm1), " ", " ",
+                    " ");
+        }
     }
 
     private void solve_TAA() {
@@ -407,8 +365,10 @@ public class LRH extends ApproachSupClass {
             ModelBuilder.def_TAA_cnsts(prmt, cplex, y_ak, z_aek); //Q1
             //
             cplex.setOut(null);
+//            cplex.setOut(new FileOutputStream(String.format("TAA_%s.txt", prmt.problemName)));
             cplex.solve();
             if (cplex.getStatus() == IloCplex.Status.Optimal) {
+//                cplex.exportModel(String.format("TAA_%s.lp", prmt.problemName));
                 L1V = -cplex.getObjValue();
                 for (AK key: y_ak.keySet()) {
                     this.y_ak.put(key, cplex.getValue(y_ak.get(key)));
@@ -509,7 +469,6 @@ public class LRH extends ApproachSupClass {
                 F1 = cplex.getObjValue();
                 if (F1 > F_star) {
                     F_star = F1;
-                    noUpdateCounter_F = 0;
                     //
                     bestSol = new Solution();
                     bestSol.prmt = prmt;
@@ -527,8 +486,6 @@ public class LRH extends ApproachSupClass {
                     }
                     bestSol.mu_aei = new HashMap<>(mu_aei);
                     bestSol.x_aeij = new HashMap<>(x_aeij);
-                } else {
-                    noUpdateCounter_F += 1;
                 }
             } else {
                 cplex.output().println("Other.Solution status = " + cplex.getStatus());
@@ -556,7 +513,7 @@ public class LRH extends ApproachSupClass {
         } else {
             // No improvement
             noUpdateCounter_L += 1;
-            if (noUpdateCounter_L == NO_IMPROVEMENT_LIMIT_L) {
+            if (noUpdateCounter_L == NO_IMPROVEMENT_LIMIT) {
                 ut *= STEP_DECREASE_RATE;
                 noUpdateCounter_L = 0;
             }

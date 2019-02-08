@@ -16,7 +16,12 @@ public class Main {
         String fn = FilenameUtils.getBaseName(prmt_file.toString());
         String prefix = fn.split("_")[1];
         String prefix_app =  String.format("%s_%s", prefix, appName);
-        Parameter prmt = Parameter.json2ser(prmt_file.toPath());
+        Parameter prmt;
+        if (prmt_file.toString().endsWith(".json")) {
+            prmt = Parameter.json2ser(prmt_file.toPath());
+        } else {
+            prmt = Parameter.loadPrmt(prmt_file.toPath());
+        }
         //
         Etc etc = new Etc(
                 sol_dpath.resolve(String.format("sol_%s.json", prefix_app)),
@@ -56,35 +61,66 @@ public class Main {
             throw new RuntimeException("Please provide arguments");
         }
         CommandOptions cmd = new CommandOptions(args);
-        String [] flags = {"-i", "-o", "-a", "-t", "-c"};
-        for (String s: flags) {
+        String [] basicFlags = {"-i", "-o"};
+        for (String s: basicFlags) {
             if (! cmd.hasOption(s)) {
                 throw new RuntimeException(String.format("Missing flag: %s", s));
             }
         }
         Path iPath = Paths.get(cmd.valueOf("-i"));
         Path oPath = Paths.get(cmd.valueOf("-o"));
-        String appName = cmd.valueOf("-a");
-        int timeLimit = Integer.parseInt(cmd.valueOf("-t"));
-        Path config_fpath = Paths.get(cmd.valueOf("-c"));
-        PropertiesLoader properties = new PropertiesLoader(config_fpath.toFile());
-        //
         if (! oPath.toFile().exists()){
             oPath.toFile().mkdir();
         }
         //
-        if (iPath.toFile().isDirectory()) {
-            ArrayList<File> prmt_files = new ArrayList(Arrays.asList(iPath.toFile().listFiles()));
-            prmt_files.sort((f1, f2) -> f1.toString().compareToIgnoreCase(f2.toString()));
-            for (File file: prmt_files) {
-                if (!file.toString().endsWith(".json")) continue;
-                runInstance(file, oPath,
-                        appName, timeLimit, properties);
+        if (cmd.hasOption("-s")) {
+            if (iPath.toFile().isDirectory()) {
+                ArrayList<File> prmt_files = new ArrayList(Arrays.asList(iPath.toFile().listFiles()));
+                prmt_files.sort((f1, f2) -> f1.toString().compareToIgnoreCase(f2.toString()));
+                for (File prmt_file: prmt_files) {
+                    if (!prmt_file.toString().endsWith(".json")) continue;
+                    Parameter prmt = Parameter.json2ser(prmt_file.toPath());
+                    //
+                    String fn = FilenameUtils.getBaseName(prmt_file.toString());
+                    Path ofPath = oPath.resolve(String.format("%s.ser", fn));
+                    System.out.println(ofPath.toString());
+                    prmt.savePrmt(ofPath);
+                }
+            } else {
+                File prmt_file = iPath.toFile();
+                Parameter prmt = Parameter.json2ser(prmt_file.toPath());
+                //
+                String fn = FilenameUtils.getBaseName(prmt_file.toString());
+                Path ofPath = oPath.resolve(String.format("%s.ser", fn));
+                System.out.println(ofPath.toString());
+                prmt.savePrmt(ofPath);
             }
         } else {
-            File prmt_file = iPath.toFile();
-            runInstance(prmt_file, oPath,
-                    appName, timeLimit, properties);
+            String [] algoFlags = {"-a", "-t", "-c"};
+            for (String s: algoFlags) {
+                if (! cmd.hasOption(s)) {
+                    throw new RuntimeException(String.format("Missing flag: %s", s));
+                }
+            }
+            String appName = cmd.valueOf("-a");
+            int timeLimit = Integer.parseInt(cmd.valueOf("-t"));
+            Path config_fpath = Paths.get(cmd.valueOf("-c"));
+            PropertiesLoader properties = new PropertiesLoader(config_fpath.toFile());
+            //
+            if (iPath.toFile().isDirectory()) {
+                ArrayList<File> prmt_files = new ArrayList(Arrays.asList(iPath.toFile().listFiles()));
+                prmt_files.sort((f1, f2) -> f1.toString().compareToIgnoreCase(f2.toString()));
+                for (File file: prmt_files) {
+                    if (! (file.toString().endsWith(".json")
+                            || file.toString().endsWith(".ser")) ) continue;
+                    runInstance(file, oPath,
+                            appName, timeLimit, properties);
+                }
+            } else {
+                File prmt_file = iPath.toFile();
+                runInstance(prmt_file, oPath,
+                        appName, timeLimit, properties);
+            }
         }
     }
 }

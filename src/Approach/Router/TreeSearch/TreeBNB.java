@@ -7,6 +7,7 @@ import Other.Parameter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 enum WorkerStatus {
     BUSY,
@@ -53,6 +54,7 @@ class Worker extends Thread {
 public class TreeBNB extends Tree {
     private int numLeafTracker;
     ArrayList<Worker> workers;
+    private int lastTreeSize;
 
     public TreeBNB(Parameter prmt, Etc etc,
                    int a, int e, HashMap<AEK, Double> lm_aek) {
@@ -62,16 +64,32 @@ public class TreeBNB extends Tree {
         workers = new ArrayList<>();
         workers.add(new Worker(workers.size(), this));
         numLeafTracker = pq.size();
+        lastTreeSize = getLastNodeID();
     }
 
     synchronized void pushNodes(ArrayList<Node> nodes) {
         super.pushNodes(nodes);
         if (workers.size() < LRH.AVAILABLE_NUM_PROCESSORS
                 && numLeafTracker * 2 < pq.size()) {
+//                && numLeafTracker * 1.5 < pq.size()) {
+//                && numLeafTracker * 1.0 < pq.size()) {
             numLeafTracker = pq.size();
+//                && lastTreeSize * 2 < getLastNodeID()) {
+//            lastTreeSize = getLastNodeID();
+
             Worker worker = new Worker(workers.size(), this);
             workers.add(worker);
             worker.start();
+
+//            System.out.println(String.format("aid%d-eid%d-#%d", a, e, workers.size()));
+        }
+    }
+
+    synchronized void update_incumbent(Node tn) {
+        assert tn.lowerBound != -Double.MAX_VALUE;
+        if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
+            incumbent = tn;
+            lastTreeSize = getLastNodeID();
         }
     }
 
@@ -82,7 +100,9 @@ public class TreeBNB extends Tree {
                     && tn.upperBound <= incumbent.lowerBound)
                 return;
             if (incumbent != null
-                    && tn.nid > incumbent.nid * lm_k.size()) {
+                    && tn.nid > incumbent.nid + lm_k.size() * lm_k.size() ) {
+//                    && tn.nid > incumbent.nid * (lm_k.size() / 2) ) {
+//                    && tn.nid > incumbent.nid * lm_k.size() ) {
                 isSearchFinished = true;
                 return;
             }
@@ -104,11 +124,19 @@ public class TreeBNB extends Tree {
         Worker firstWorker = workers.get(0);
         firstWorker.start();
         firstWorker.join();
-        for (Worker worker: workers) {
+        for (Iterator<Worker> iterator = workers.iterator(); iterator.hasNext();) {
+            Worker worker = iterator.next();
             if (worker.wid == 0)
                 continue;
             worker.join();
         }
+
+
+//        for (Worker worker: workers) {
+////            if (worker.wid == 0)
+////                continue;
+//            worker.join();
+//        }
         update_dvs();
     }
 

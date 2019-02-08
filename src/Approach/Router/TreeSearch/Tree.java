@@ -99,6 +99,10 @@ public class Tree {
         return lastNodeID;
     }
 
+    synchronized int getLastNodeID() {
+        return lastNodeID;
+    }
+
     synchronized void update_incumbent(Node tn) {
         assert tn.lowerBound != -Double.MAX_VALUE;
         if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {

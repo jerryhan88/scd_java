@@ -104,7 +104,7 @@ public class Solution implements Serializable {
                 ArrayList<String> _assignedTasks = new ArrayList<>();
                 Set<String> meaninglessNodes = new HashSet<>(prmt.N);
                 for (int k: prmt.K) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     if (y_ak.get(ak) > 0.5) {
                         assignedTasks.add(k);
                         _assignedTasks.add(String.format("%d", k));
@@ -120,7 +120,7 @@ public class Solution implements Serializable {
                 logContents += "[" + String.join(",", _assignedTasks) + "]\n";
                 aE = prmt.E_a.get(a);
                 for (int e : aE) {
-                    ae = new AE(a, e);
+                    ae = prmt.get_AE(a, e);
                     aeS = prmt.S_ae.get(ae);
                     aeN = prmt.N_ae.get(ae);
                     o_ae = String.format("s0_%d_%d", a, e);
@@ -128,7 +128,7 @@ public class Solution implements Serializable {
                     HashMap<String, String> _route = new HashMap<>();
                     for (String i: aeN) {
                         for (String j: aeN) {
-                            aeij = new AEIJ(a, e, i, j);
+                            aeij = prmt.get_AEIJ(a, e, i, j);
                             if (x_aeij.get(aeij) > 0.5) {
                                 _route.put(i, j);
                             }
@@ -139,7 +139,7 @@ public class Solution implements Serializable {
                     ArrayList<String> _accomplishedTasks = new ArrayList<>();
                     while (!i.equals(d_ae)) {
                         if (!meaninglessNodes.contains(i)) {
-                            aei = new AEI(a, e, i);
+                            aei = prmt.get_AEI(a, e, i);
                             route += String.format("%s(%.2f)-", i, mu_aei.get(aei));
                             if (i.startsWith("n")) {
                                 _accomplishedTasks.add(i.substring("n".length()));
@@ -147,7 +147,7 @@ public class Solution implements Serializable {
                         }
                         i = _route.get(i);
                     }
-                    aei = new AEI(a, e, i);
+                    aei = prmt.get_AEI(a, e, i);
                     route += String.format("%s(%.2f)", i, mu_aei.get(aei));
                     logContents += String.format("\t R%d%s: %s\n", e,
                             "[" + String.join(",", _accomplishedTasks) + "]"

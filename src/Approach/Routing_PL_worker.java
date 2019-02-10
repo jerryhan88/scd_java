@@ -67,6 +67,7 @@ public class Routing_PL_worker extends RecursiveTask<Double> {
                 }
             } else {
                 numWorkers = Math.min(numSubProb, LRH.AVAILABLE_NUM_PROCESSORS);
+//                numWorkers = Math.min(numSubProb / 2, LRH.AVAILABLE_NUM_PROCESSORS);
             }
             ArrayList[] dividedTasks = new ArrayList[numWorkers];
             for (int i = 0; i < dividedTasks.length; i++) {

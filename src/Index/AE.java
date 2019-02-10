@@ -2,11 +2,6 @@ package Index;
 
 public class AE extends IndexSupCls {
     private int a, e;
-    public AE(int a, int e) {
-        this.a = a;
-        this.e = e;
-        set_label();
-    }
 
     public AE(int a, Object e) {
         this.a = a;

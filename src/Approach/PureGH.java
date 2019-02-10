@@ -57,7 +57,7 @@ class Agent extends Thread {
         AE ae;
         ArrayList aE = this.prmt.E_a.get(a);
         for (Object e : aE) {
-            ae = new AE(a, e);
+            ae = this.prmt.get_AE(a, e);
             aeF = this.prmt.F_ae.get(ae);
             aeS = this.prmt.S_ae.get(ae);
             for (Object k: aeF) {
@@ -91,7 +91,7 @@ class Agent extends Thread {
             HashMap<Integer, ArrayList> tid_eBestSeq = new HashMap<>();
             expReward = 0.0;
             for (Object e: prmt.E_a.get(aid)) {
-                p = prmt.p_ae.get(new AE(aid, e));
+                p = prmt.p_ae.get(prmt.get_AE(aid, e));
                 _e = (Integer) e;
                 //
                 isFeasible = true;
@@ -215,22 +215,22 @@ public class PureGH extends ApproachSupClass {
         sol.x_aeij = new HashMap<>();
         for (int a : prmt.A) {
             for (int k : prmt.K) {
-                ak = new AK(a, k);
+                ak = prmt.get_AK(a, k);
                 sol.y_ak.put(ak, 0.0);
             }
             aE = prmt.E_a.get(a);
             for (Object e : aE) {
                 for (int k : prmt.K) {
-                    aek = new AEK(a, e, k);
+                    aek = prmt.get_AEK(a, e, k);
                     sol.z_aek.put(aek, 0.0);
                 }
-                aeN = prmt.N_ae.get(new AE(a, e));
+                aeN = prmt.N_ae.get(prmt.get_AE(a, e));
                 for (Object i: aeN) {
                     for (Object j: aeN) {
-                        aeij = new AEIJ(a, e, i, j);
+                        aeij = prmt.get_AEIJ(a, e, i, j);
                         sol.x_aeij.put(aeij, 0.0);
                     }
-                    aei = new AEI(a, e, i);
+                    aei = prmt.get_AEI(a, e, i);
                     sol.mu_aei.put(aei, 0.0);
                 }
             }
@@ -242,11 +242,11 @@ public class PureGH extends ApproachSupClass {
             agent = agents.get(a);
             sol.objV += agent.currentReward;
             for (int k: prmt.K) {
-                ak = new AK(a, k);
+                ak = prmt.get_AK(a, k);
                 if (agent.KnP.contains(k)) {
                     sol.y_ak.replace(ak, 1.0);
                     for (Object e: prmt.E_a.get(a)) {
-                        aek = new AEK(a, e, k);
+                        aek = prmt.get_AEK(a, e, k);
                         if (!agent.KnP_e.get(e).contains(k)) {
                             sol.z_aek.replace(aek, 1.0);
                         }
@@ -257,11 +257,11 @@ public class PureGH extends ApproachSupClass {
                 for (int s = 0; s < agent.Sn_e.get(e).size() - 1; s++) {
                     n0 = agent.Sn_e.get(e).get(s);
                     n1 = agent.Sn_e.get(e).get(s + 1);
-                    sol.x_aeij.replace(new AEIJ(a, e, n0, n1), 1.0);
+                    sol.x_aeij.replace(prmt.get_AEIJ(a, e, n0, n1), 1.0);
                 }
                 HashMap<String, Double> arrivalTime = GH_helper.get_arrivalTime(prmt, agent.Sn_e.get(e));
                 for (String i: arrivalTime.keySet()) {
-                    sol.mu_aei.replace(new AEI(a, e, i), arrivalTime.get(i));
+                    sol.mu_aei.replace(prmt.get_AEI(a, e, i), arrivalTime.get(i));
                 }
             }
         }

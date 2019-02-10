@@ -8,12 +8,6 @@ public class IJ extends IndexSupCls {
         set_label();
     }
 
-    public IJ(Object i, Object j) {
-        this.i = (String) i;
-        this.j = (String) j;
-        set_label();
-    }
-
     private void set_label() {
         label = String.format("%s&%s", this.i, this.j);
     }

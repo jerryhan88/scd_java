@@ -55,22 +55,22 @@ public class ILP extends ApproachSupClass {
                     AEI aei;
                     for (int a : prmt.A) {
                         for (int k : prmt.K) {
-                            ak = new AK(a, k);
+                            ak = prmt.get_AK(a, k);
                             sol.y_ak.put(ak, getIncumbentValue(y_ak.get(ak)));
                         }
                         aE = prmt.E_a.get(a);
                         for (Object e : aE) {
                             for (int k : prmt.K) {
-                                aek = new AEK(a, e, k);
+                                aek = prmt.get_AEK(a, e, k);
                                 sol.z_aek.put(aek, getIncumbentValue(z_aek.get(aek)));
                             }
-                            aeN = prmt.N_ae.get(new AE(a, e));
+                            aeN = prmt.N_ae.get(prmt.get_AE(a, e));
                             for (Object i: aeN) {
                                 for (Object j: aeN) {
-                                    aeij = new AEIJ(a, e, i, j);
+                                    aeij = prmt.get_AEIJ(a, e, i, j);
                                     sol.x_aeij.put(aeij, getIncumbentValue(x_aeij.get(aeij)));
                                 }
-                                aei = new AEI(a, e, i);
+                                aei = prmt.get_AEI(a, e, i);
                                 sol.mu_aei.put(aei, getIncumbentValue(mu_aei.get(aei)));
                             }
                         }
@@ -119,14 +119,14 @@ public class ILP extends ApproachSupClass {
             obj = cplex.linearNumExpr();
             for (int k : prmt.K) {
                 for (int a : prmt.A) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     r = prmt.r_k.get(k);
                     y = y_ak.get(ak);
                     obj.addTerm(r, y);
                     aE = prmt.E_a.get(a);
                     for (Object e : aE) {
-                        ae = new AE(a, e);
-                        aek = new AEK(a, e, k);
+                        ae = prmt.get_AE(a, e);
+                        aek = prmt.get_AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
                         z = z_aek.get(aek);
                         obj.addTerm(-(r * p), z);

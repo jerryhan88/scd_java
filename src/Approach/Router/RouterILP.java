@@ -148,7 +148,7 @@ public class RouterILP extends RouterSup {
         Etc etc = rProbSol.get_etc();
         HashMap<AEK, Double> lm_aek = rProbSol.get_lm_aek();
         //
-        AE ae = new AE(a, e);
+        AE ae = prmt.get_AE(a, e);
         ArrayList aeN = prmt.N_ae.get(ae);
         ArrayList aeF = prmt.F_ae.get(ae);
         //
@@ -164,19 +164,19 @@ public class RouterILP extends RouterSup {
             HashMap<AEI, IloNumVar> mu_aei = new HashMap<>();
             for (Object i: aeN) {
                 for (Object j: aeN) {
-                    aeij = new AEIJ(a, e, i, j);
+                    aeij = prmt.get_AEIJ(a, e, i, j);
                     x_aeij.put(aeij, cplex.boolVar(String.format("x(%s)", aeij.get_label())));
                 }
-                aei = new AEI(a, e, i);
+                aei = prmt.get_AEI(a, e, i);
                 mu_aei.put(aei, cplex.numVar(0.0, Double.MAX_VALUE, String.format("mu(%s)", aei.get_label())));
             }
             //
             IloLinearNumExpr obj = cplex.linearNumExpr();
             for (Object k : aeF) {
-                aek = new AEK(a, e, k);
+                aek = prmt.get_AEK(a, e, k);
                 lm = lm_aek.get(aek);
                 for (Object j: aeN) {
-                    aeij = new AEIJ(a, e, prmt.n_k.get((Integer) k), j);
+                    aeij = prmt.get_AEIJ(a, e, prmt.n_k.get((Integer) k), j);
                     x = x_aeij.get(aeij);
                     obj.addTerm(-lm, x);
                 }

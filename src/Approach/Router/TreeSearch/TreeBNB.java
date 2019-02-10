@@ -18,7 +18,7 @@ class Worker extends Thread {
 
     int wid;
     private TreeBNB tree;
-    private WorkerStatus status;
+    WorkerStatus status;
 
 
     Worker(int wid, TreeBNB tree) {
@@ -38,14 +38,7 @@ class Worker extends Thread {
                 tree.branch();
             }
             status = WorkerStatus.WAITING;
-            boolean allFinished = true;
-            for (Worker worker: tree.workers) {
-                if (worker.status == WorkerStatus.BUSY) {
-                    allFinished = false;
-                    break;
-                }
-            }
-            if (allFinished)
+            if (tree.checkStatusOfAllWorker())
                 tree.isSearchFinished = true;
         }
     }
@@ -55,6 +48,7 @@ public class TreeBNB extends Tree {
     private int numLeafTracker;
     ArrayList<Worker> workers;
     private int lastTreeSize;
+    int initNumWorker;
 
     public TreeBNB(Parameter prmt, Etc etc,
                    int a, int e, HashMap<AEK, Double> lm_aek) {
@@ -62,34 +56,55 @@ public class TreeBNB extends Tree {
         super(prmt, etc,
                 a, e, lm_aek);
         workers = new ArrayList<>();
-        workers.add(new Worker(workers.size(), this));
+        initNumWorker = (int) Math.max(2, lm_k.size() * 0.5);
+        for (int i = 0; i < initNumWorker; i ++) {
+            workers.add(new Worker(workers.size(), this));
+        }
         numLeafTracker = pq.size();
         lastTreeSize = getLastNodeID();
     }
 
-    synchronized void pushNodes(ArrayList<Node> nodes) {
-        super.pushNodes(nodes);
-        if (workers.size() < LRH.AVAILABLE_NUM_PROCESSORS
-                && numLeafTracker * 2 < pq.size()) {
-//                && numLeafTracker * 1.5 < pq.size()) {
-//                && numLeafTracker * 1.0 < pq.size()) {
-            numLeafTracker = pq.size();
-//                && lastTreeSize * 2 < getLastNodeID()) {
-//            lastTreeSize = getLastNodeID();
-
-            Worker worker = new Worker(workers.size(), this);
-            workers.add(worker);
-            worker.start();
-
-//            System.out.println(String.format("aid%d-eid%d-#%d", a, e, workers.size()));
+    boolean checkStatusOfAllWorker(){
+        synchronized (this) {
+            boolean allFinished = true;
+            for (Iterator<Worker> iterator = workers.iterator(); iterator.hasNext();) {
+                Worker worker = iterator.next();
+                if (worker.status == WorkerStatus.BUSY) {
+                    allFinished = false;
+                    break;
+                }
+            }
+            return allFinished;
         }
     }
 
-    synchronized void update_incumbent(Node tn) {
-        assert tn.lowerBound != -Double.MAX_VALUE;
-        if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
-            incumbent = tn;
-            lastTreeSize = getLastNodeID();
+    void pushNodes(ArrayList<Node> nodes) {
+        synchronized (this) {
+            super.pushNodes(nodes);
+            if (workers.size() < LRH.AVAILABLE_NUM_PROCESSORS
+                    && numLeafTracker * lm_k.size() < pq.size()) {
+//                    && numLeafTracker * 2 < pq.size()) {
+//                && numLeafTracker * 1.5 < pq.size()) {
+//                && numLeafTracker * 1.0 < pq.size()) {
+//                && lastTreeSize * 2 < getLastNodeID()) {
+//            lastTreeSize = getLastNodeID();
+                numLeafTracker = pq.size();
+                Worker worker = new Worker(workers.size(), this);
+                workers.add(worker);
+                worker.start();
+
+//            System.out.println(String.format("aid%d-eid%d-#%d", a, e, workers.size()));
+            }
+        }
+    }
+
+    void update_incumbent(Node tn) {
+        synchronized (this) {
+            assert tn.lowerBound != -Double.MAX_VALUE;
+            if (incumbent == null || incumbent.lowerBound < tn.lowerBound) {
+                incumbent = tn;
+                lastTreeSize = getLastNodeID();
+            }
         }
     }
 
@@ -101,6 +116,7 @@ public class TreeBNB extends Tree {
                 return;
             if (incumbent != null
                     && tn.nid > incumbent.nid + lm_k.size() * lm_k.size() ) {
+//                    && tn.nid > incumbent.nid + lm_k.size() * 2 ) {
 //                    && tn.nid > incumbent.nid * (lm_k.size() / 2) ) {
 //                    && tn.nid > incumbent.nid * lm_k.size() ) {
                 isSearchFinished = true;
@@ -121,12 +137,18 @@ public class TreeBNB extends Tree {
     }
 
     public void solve() throws InterruptedException {
-        Worker firstWorker = workers.get(0);
-        firstWorker.start();
-        firstWorker.join();
+//        Worker firstWorker = workers.get(0);
+//        firstWorker.start();
+//        firstWorker.join();
+        for (int wid = 0; wid < initNumWorker; wid++) {
+            workers.get(wid).start();
+        }
+        for (int wid = 0; wid < initNumWorker; wid++) {
+            workers.get(wid).join();
+        }
         for (Iterator<Worker> iterator = workers.iterator(); iterator.hasNext();) {
             Worker worker = iterator.next();
-            if (worker.wid == 0)
+            if (worker.wid < initNumWorker)
                 continue;
             worker.join();
         }

@@ -33,7 +33,7 @@ public class Tree {
         this.a = a;
         this.e = e;
         //
-        AE ae = new AE(a, e);
+        AE ae = prmt.get_AE(a, e);
         a_v = prmt.v_a.get(a);
         a_w = prmt.w_a.get(a);
         ae_l = this.prmt.l_ae.get(ae);
@@ -43,7 +43,7 @@ public class Tree {
         ArrayList<Integer> KnM = new ArrayList<>();
         AEK aek;
         for (Object k: aeF) {
-            aek = new AEK(this.a, this.e, k);
+            aek = prmt.get_AEK(this.a, this.e, k);
             if (lm_aek.get(aek) > 0) {
                 KnM.add((Integer) k);
                 lm_k.put((Integer) k, lm_aek.get(aek));
@@ -74,23 +74,23 @@ public class Tree {
     void update_dvs() {
         x_aeij = new HashMap<>();
         mu_aei = new HashMap<>();
-        ArrayList aeN = prmt.N_ae.get(new AE(a, e));
+        ArrayList aeN = prmt.N_ae.get(prmt.get_AE(a, e));
         for (Object i: aeN) {
             for (Object j: aeN) {
-                x_aeij.put(new AEIJ(a, e, i, j), 0.0);
+                x_aeij.put(prmt.get_AEIJ(a, e, i, j), 0.0);
             }
-            mu_aei.put(new AEI(a, e, i), 0.0);
+            mu_aei.put(prmt.get_AEI(a, e, i), 0.0);
         }
         objV = incumbent.lowerBound;
         String n0, n1;
         for (int s = 0; s < incumbent.Sn.size() - 1; s++) {
             n0 = incumbent.Sn.get(s);
             n1 = incumbent.Sn.get(s + 1);
-            x_aeij.put(new AEIJ(a, e, n0, n1), 1.0);
+            x_aeij.put(prmt.get_AEIJ(a, e, n0, n1), 1.0);
         }
         HashMap<String, Double> arrivalTime = GH_helper.get_arrivalTime(prmt, incumbent.Sn);
         for (String i: arrivalTime.keySet()) {
-            mu_aei.put(new AEI(a, e, i), arrivalTime.get(i));
+            mu_aei.put(prmt.get_AEI(a, e, i), arrivalTime.get(i));
         }
     }
 

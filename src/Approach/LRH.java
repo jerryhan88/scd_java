@@ -85,14 +85,14 @@ public class LRH extends ApproachSupClass {
             obj = cplex.linearNumExpr();
             for (int k : prmt.K) {
                 for (int a : prmt.A) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     r = prmt.r_k.get(k);
                     y = y_ak.get(ak);
                     obj.addTerm(r, y);
                     aE = prmt.E_a.get(a);
                     for (Object e : aE) {
-                        ae = new AE(a, e);
-                        aek = new AEK(a, e, k);
+                        ae = prmt.get_AE(a, e);
+                        aek = prmt.get_AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
                         z = z_aek.get(aek);
                         obj.addTerm(-(r * p), z);
@@ -115,7 +115,7 @@ public class LRH extends ApproachSupClass {
                 aE = this.prmt.E_a.get(a);
                 for (Object e : aE) {
                     for (int k : this.prmt.K) {
-                        aek = new AEK(a, e, k);
+                        aek = prmt.get_AEK(a, e, k);
                         cnst_lable = String.format("CC(%s)", aek.get_label());
                         //
                         lm = cplex.getDual(complicating_constraints.get(cnst_lable));
@@ -199,7 +199,7 @@ public class LRH extends ApproachSupClass {
                     aE = prmt.E_a.get(a);
                     for (int e: aE) {
                         for (int k: prmt.K) {
-                            aek = new AEK(a, e, k);
+                            aek = prmt.get_AEK(a, e, k);
                             header[lmIndex] = aek.get_label();
                             lmIndex += 1;
                         }
@@ -317,13 +317,13 @@ public class LRH extends ApproachSupClass {
             cplex = new IloCplex();
             for (int a : prmt.A) {
                 for (int k : prmt.K) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     y_ak.put(ak, cplex.boolVar(String.format("y(%s)", ak.get_label())));
                 }
                 aE = prmt.E_a.get(a);
                 for (Object e : aE) {
                     for (int k : prmt.K) {
-                        aek = new AEK(a, e, k);
+                        aek = prmt.get_AEK(a, e, k);
                         z_aek.put(aek, cplex.boolVar(String.format("z(%s)", aek.get_label())));
                     }
                 }
@@ -335,24 +335,24 @@ public class LRH extends ApproachSupClass {
                 for (int a : prmt.A) {
                     aE = prmt.E_a.get(a);
                     for (Object e : aE) {
-                        ae = new AE(a, e);
-                        aek = new AEK(a, e, k);
+                        ae = prmt.get_AE(a, e);
+                        aek = prmt.get_AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
                         z = z_aek.get(aek);
                         obj.addTerm(r * p, z);
                     }
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     y = y_ak.get(ak);
                     obj.addTerm(-r, y);
                 }
             }
             for (int k : prmt.K) {
                 for (int a : prmt.A) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     y = y_ak.get(ak);
                     aE = prmt.E_a.get(a);
                     for (Object e : aE) {
-                        aek = new AEK(a, e, k);
+                        aek = prmt.get_AEK(a, e, k);
                         lm = lm_aek.get(aek);
                         obj.addTerm(lm, y);
                         z = z_aek.get(aek);
@@ -407,13 +407,13 @@ public class LRH extends ApproachSupClass {
             cplex = new IloCplex();
             for (int a : prmt.A) {
                 for (int k : prmt.K) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     y_ak.put(ak, cplex.boolVar(String.format("y(%s)", ak.get_label())));
                 }
                 aE = prmt.E_a.get(a);
                 for (Object e : aE) {
                     for (int k : prmt.K) {
-                        aek = new AEK(a, e, k);
+                        aek = prmt.get_AEK(a, e, k);
                         z_aek.put(aek, cplex.boolVar(String.format("z(%s)", aek.get_label())));
                     }
                 }
@@ -422,14 +422,14 @@ public class LRH extends ApproachSupClass {
             obj = cplex.linearNumExpr();
             for (int k : prmt.K) {
                 for (int a : prmt.A) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     r = prmt.r_k.get(k);
                     y = y_ak.get(ak);
                     obj.addTerm(r, y);
                     aE = prmt.E_a.get(a);
                     for (Object e : aE) {
-                        ae = new AE(a, e);
-                        aek = new AEK(a, e, k);
+                        ae = prmt.get_AE(a, e);
+                        aek = prmt.get_AEK(a, e, k);
                         p = prmt.p_ae.get(ae);
                         z = z_aek.get(aek);
                         obj.addTerm(-(r * p), z);
@@ -443,17 +443,17 @@ public class LRH extends ApproachSupClass {
             for (int a : prmt.A) {
                 aE = prmt.E_a.get(a);
                 for (Object e : aE) {
-                    ae = new AE(a, e);
+                    ae = prmt.get_AE(a, e);
                     aeN = prmt.N_ae.get(ae);
                     for (int k: prmt.K) {
-                        ak = new AK(a, k);
-                        aek = new AEK(a, e, k);
+                        ak = prmt.get_AK(a, k);
+                        aek = prmt.get_AEK(a, e, k);
                         cnst = cplex.linearNumExpr();
                         y = y_ak.get(ak);
                         cnst.addTerm(1, y);
                         double sumX = 0;
                         for (Object j: aeN) {
-                            aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                            aeij = prmt.get_AEIJ(a, e, j, prmt.n_k.get(k));
                             sumX += x_aeij.get(aeij);
                         }
                         z = z_aek.get(aek);
@@ -523,17 +523,17 @@ public class LRH extends ApproachSupClass {
         double denominator2 = 0.0;
         for (int k: prmt.K) {
             for (int a: prmt.A) {
-                ak = new AK(a, k);
+                ak = prmt.get_AK(a, k);
                 y = y_ak.get(ak);
                 aE = prmt.E_a.get(a);
                 for (Object e : aE) {
-                    ae = new AE(a, e);
-                    aek = new AEK(a, e, k);
+                    ae = prmt.get_AE(a, e);
+                    aek = prmt.get_AEK(a, e, k);
                     z = z_aek.get(aek);
                     aeN = prmt.N_ae.get(ae);
                     double sumX = 0.0;
                     for (Object j: aeN) {
-                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                        aeij = prmt.get_AEIJ(a, e, j, prmt.n_k.get(k));
                         sumX += x_aeij.get(aeij);
                     }
                     denominator2 += Math.pow(y - z - sumX, 2);
@@ -560,16 +560,16 @@ public class LRH extends ApproachSupClass {
         for (int a: prmt.A) {
             aE = prmt.E_a.get(a);
             for (Object e: aE) {
-                ae = new AE(a, e);
+                ae = prmt.get_AE(a, e);
                 aeN = prmt.N_ae.get(ae);
                 for (int k: prmt.K) {
-                    ak = new AK(a, k);
+                    ak = prmt.get_AK(a, k);
                     y = y_ak.get(ak);
-                    aek = new AEK(a, e, k);
+                    aek = prmt.get_AEK(a, e, k);
                     z = z_aek.get(aek);
                     double sumX = 0.0;
                     for (Object j: aeN) {
-                        aeij = new AEIJ(a, e, j, prmt.n_k.get(k));
+                        aeij = prmt.get_AEIJ(a, e, j, prmt.n_k.get(k));
                         sumX += x_aeij.get(aeij);
                     }
                     lm = lm_aek.get(aek) + at * (y - z - sumX);

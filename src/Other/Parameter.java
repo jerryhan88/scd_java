@@ -1,8 +1,6 @@
 package Other;
 
-import Index.AE;
-import Index.AEIJ;
-import Index.IJ;
+import Index.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -38,7 +36,14 @@ public class Parameter implements Serializable {
     public HashMap<AE, ArrayList> F_ae = new HashMap<>();
     public HashMap<AE, ArrayList> iF_ae = new HashMap<>();
     public double M;
-
+    //
+    ArrayList<ArrayList> Indices_AE;
+    ArrayList<ArrayList> Indices_AK;
+    ArrayList<ArrayList> Indices_AEK;
+    HashMap<String, AEIJ> Indices_AEIJ;
+    HashMap<String, AEI> Indices_AEI;
+    HashMap<String, IJ> Indices_IJ;
+    //
 
     public void savePrmt(Path fpath) {
         try {
@@ -96,6 +101,35 @@ public class Parameter implements Serializable {
                 _prmt.E_a.add(arrayInNew);
             }
             //
+            _prmt.Indices_AE = new ArrayList<>();
+            for (int a: _prmt.A) {
+                ArrayList<AE> inner_AE = new ArrayList<>();
+                for (Object e: _prmt.E_a.get(a)) {
+                    inner_AE.add(new AE(a, e));
+                }
+                _prmt.Indices_AE.add(inner_AE);
+            }
+            _prmt.Indices_AK = new ArrayList<>();
+            for (int a: _prmt.A) {
+                ArrayList<AK> inner_AK = new ArrayList<>();
+                for (int k: _prmt.K) {
+                    inner_AK.add(new AK(a, k));
+                }
+                _prmt.Indices_AK.add(inner_AK);
+            }
+            _prmt.Indices_AEK = new ArrayList<>();
+            for (int a: _prmt.A) {
+                ArrayList<ArrayList> inner_AEK = new ArrayList<>();
+                for (Object e: _prmt.E_a.get(a)) {
+                    ArrayList<AEK> inner_inner_AEK = new ArrayList<>();
+                    for (int k: _prmt.K) {
+                        inner_inner_AEK.add(new AEK(a, e, k));
+                    }
+                    inner_AEK.add(inner_inner_AEK);
+                }
+                _prmt.Indices_AEK.add(inner_AEK);
+            }
+            //
             JSONObject _S_ae = (JSONObject) jsonBase.get("S_ae");
             JSONObject _N_ae = (JSONObject) jsonBase.get("N_ae");
             JSONObject _p_ae = (JSONObject) jsonBase.get("p_ae");
@@ -105,12 +139,14 @@ public class Parameter implements Serializable {
             //
             int a, e;
             AE ae;
+            AEIJ aeij;
             JSONArray arrayJ;
+            _prmt.Indices_AEIJ = new HashMap<>();
             for (String key: (Set<String>) _S_ae.keySet()) {
                 String[] _key = key.split("&");
                 a = Integer.parseInt(_key[0]);
                 e = Integer.parseInt(_key[1]);
-                ae = new AE(a, e);
+                ae = _prmt.get_AE(a, e);
                 //
                 ArrayList<String> aeS = new ArrayList<>();
                 arrayJ = (JSONArray) _S_ae.get(key);
@@ -143,15 +179,22 @@ public class Parameter implements Serializable {
                 e = Integer.parseInt(_key[1]);
                 String i = _key[2];
                 String j = _key[3];
-                _prmt.c_aeij.put(new AEIJ(a, e, i, j), (long) _c_aeij.get(key));
+                aeij = new AEIJ(a, e, i, j);
+                _prmt.Indices_AEIJ.put(aeij.get_label(), aeij);
+                _prmt.c_aeij.put(_prmt.get_AEIJ(a, e, i, j), (long) _c_aeij.get(key));
             }
             parseJsonObject(jsonBase, _prmt.al_i, "al_i");
             parseJsonObject(jsonBase, _prmt.be_i, "be_i");
             parseJsonObject(jsonBase, _prmt.ga_i, "ga_i");
+            //
+            IJ ij;
+            _prmt.Indices_IJ = new HashMap<>();
             JSONObject _t_ij = (JSONObject) jsonBase.get("t_ij");
             for (String key: (Set<String>) _t_ij.keySet()) {
-                String [] ij = key.split("&");
-                _prmt.t_ij.put(new IJ(ij[0], ij[1]), (double) _t_ij.get(key));
+                String [] _ij = key.split("&");
+                ij = new IJ(_ij[0], _ij[1]);
+                _prmt.Indices_IJ.put(ij.get_label(), ij);
+                _prmt.t_ij.put(_prmt.get_IJ(_ij[0], _ij[1]), (double) _t_ij.get(key));
             }
             //
             AE _ae;
@@ -160,7 +203,7 @@ public class Parameter implements Serializable {
             for (int _a : _prmt.A) {
                 aE = _prmt.E_a.get(_a);
                 for (int _e : aE) {
-                    _ae = new AE(_a, _e);
+                    _ae = _prmt.get_AE(_a, _e);
                     aeF = new HashSet<>(_prmt.F_ae.get(_ae));
                     ArrayList<Integer> ae_uF = new ArrayList<>();
                     for (int _k: _prmt.K) {
@@ -172,6 +215,28 @@ public class Parameter implements Serializable {
                 }
             }
             _prmt.M = _prmt.N.size() * (Collections.max(_prmt.t_ij.values()) + Collections.max(_prmt.ga_i.values()));
+            //
+            ArrayList aeN;
+            AEI aei;
+            _prmt.Indices_AEI = new HashMap<>();
+            for (int _a : _prmt.A) {
+                aE = _prmt.E_a.get(_a);
+                for (Object _e : aE) {
+                    aeN = _prmt.N_ae.get(_prmt.get_AE(_a, _e));
+                    for (Object i: aeN) {
+                        for (Object j: aeN) {
+                            aeij = _prmt.get_AEIJ(_a, _e, i, j);
+                            if (aeij == null) {
+                                aeij = new AEIJ(_a, _e, i, j);
+                                _prmt.Indices_AEIJ.put(aeij.get_label(), aeij);
+                            }
+                        }
+                        aei = new AEI(_a, _e, i);
+                        _prmt.Indices_AEI.put(aei.get_label(), aei);
+                    }
+                }
+            }
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -187,5 +252,32 @@ public class Parameter implements Serializable {
             ex.printStackTrace();
         }
         return _prmt;
+    }
+
+    public AE get_AE(int a, Object e) {
+        return (AE) Indices_AE.get(a).get((Integer) e);
+    }
+
+    public AK get_AK(int a, int k) {
+        return (AK) Indices_AK.get(a).get(k);
+    }
+
+    public AEK get_AEK(int a, Object e, Object k) {
+        return (AEK) ((ArrayList) Indices_AEK.get(a).get((Integer) e)).get((Integer) k);
+    }
+
+    public AEIJ get_AEIJ(int a, Object e, Object i, Object j) {
+        String label = String.format("%d&%d&%s&%s", a, e, i, j);
+        return Indices_AEIJ.get(label);
+    }
+
+    public AEI get_AEI(int a, Object e, Object i) {
+        String label = String.format("%d&%d&%s", a, e, i);
+        return Indices_AEI.get(label);
+    }
+
+    public IJ get_IJ(Object i, Object j) {
+        String label = String.format("%s&%s", i, j);
+        return Indices_IJ.get(label);
     }
 }

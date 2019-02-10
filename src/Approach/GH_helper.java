@@ -60,7 +60,7 @@ public class GH_helper {
         double erest_deptTime = prmt.al_i.get(n0) + prmt.ga_i.get(n0);
         for (int i = 1; i < sequence.size(); i++) {
             n1 = sequence.get(i);
-            double erest_arrvTime = erest_deptTime + prmt.t_ij.get(new IJ(n0, n1));
+            double erest_arrvTime = erest_deptTime + prmt.t_ij.get(prmt.get_IJ(n0, n1));
             if (prmt.be_i.get(n1) < erest_arrvTime) {
                 return true;
             } else {
@@ -77,7 +77,7 @@ public class GH_helper {
         for (int i = 0; i < sequence.size() - 1; i++) {
             n0 = sequence.get(i);
             n1 = sequence.get(i + 1);
-            tt += prmt.t_ij.get(new IJ(n0, n1));
+            tt += prmt.t_ij.get(prmt.get_IJ(n0, n1));
         }
         return tt;
     }
@@ -91,7 +91,7 @@ public class GH_helper {
         for (int i = 1; i < sequence.size(); i++) {
             n1 = sequence.get(i);
             //
-            double erest_arrvTime = erest_deptTime + prmt.t_ij.get(new IJ(n0, n1));
+            double erest_arrvTime = erest_deptTime + prmt.t_ij.get(prmt.get_IJ(n0, n1));
             double actual_arrvTime = Math.max(erest_arrvTime, prmt.al_i.get(n1));
             arrivalTime.put(n1, actual_arrvTime);
             erest_deptTime = actual_arrvTime + prmt.ga_i.get(n1);
